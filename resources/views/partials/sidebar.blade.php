@@ -26,6 +26,14 @@
                     <i class="ti ti-dots nav-small-cap-icon fs-4"></i>
                     <span class="hide-menu">COMPONENTS</span>
                 </li>
+                <li class="sidebar-item">
+                    <a class="sidebar-link" href="{{ route('recordings.index') }}" aria-expanded="false">
+                        <span>
+                            <i class="fa fa-play" aria-hidden="true"></i>
+                        </span>
+                        <span class="hide-menu">My Library</span>
+                    </a>
+                </li>
                 @if (is_role() == 'user' || is_role() == 'company')
                 <li class="sidebar-item">
                     <a class="sidebar-link" href="{{ route('contacts.index') }}" aria-expanded="false">
@@ -40,7 +48,7 @@
                 <li class="sidebar-item">
                     <a class="sidebar-link" href="{{ route('users.index') }}" aria-expanded="false">
                         <span>
-                            <i class="ti ti-user"></i>
+                            <i class="fa fa-users" aria-hidden="true"></i>
                         </span>
                         <span class="hide-menu">Users</span>
                     </a>
@@ -48,17 +56,17 @@
                 <li class="sidebar-item">
                     <a class="sidebar-link" href="{{ route('plans.index') }}" aria-expanded="false">
                         <span>
-                            <i class="ti ti-files"></i>
+                            <i class="fa fa-files-o" aria-hidden="true"></i>
                         </span>
                         <span class="hide-menu">Plans</span>
                     </a>
                 </li>
                 @endif
-                @if (is_role() == 'company' || is_role() == 'admin' )
+                @if (is_role() == 'company' || is_role() == 'admin')
                 <li class="sidebar-item">
                     <a class="sidebar-link" href="{{ route('settings.store') }}" aria-expanded="false">
                         <span>
-                            <i class="ti ti-cards"></i>
+                            <i class="fa fa-cog" aria-hidden="true"></i>
                         </span>
                         <span class="hide-menu">Setting</span>
                     </a>

@@ -13,9 +13,19 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
+
+function getPaginate($limit = null)
+{
+    $limit = env('RECORD_LIMIT') ?? 15;
+    if (!$limit) {
+        $limit = $limit;
+    }
+    return $limit;
+}
+
 function uploadFile($file, string $path, string $name): string
 {
-    return $file->move($path, $name.'.'.$file->getClientOriginalExtension())->getPathname();
+    return $file->move($path, $name . '.' . $file->getClientOriginalExtension())->getPathname();
 }
 
 function deleteFile($filePath)
@@ -78,7 +88,7 @@ function getFormFields($table, $skip = [], $user = '', $forcf = false, $checkcf 
         $user = (object) $setuser;
     } else {
         $fields = getTableColumns1($table, $skip);
-        if (! empty($user) && is_array($user)) {
+        if (!empty($user) && is_array($user)) {
             $user = (object) $user;
         }
     }
@@ -95,7 +105,7 @@ function getTableColumns1($table, $skip = [], $showcoltype = false)
 {
 
     $columns = DB::getSchemaBuilder()->getColumnListing($table);
-    if (! empty($skip)) {
+    if (!empty($skip)) {
         $columns = array_diff($columns, $skip);
     }
 
@@ -110,7 +120,7 @@ function getTableColumns1($table, $skip = [], $showcoltype = false)
 function getTableColumns($table, $skip = [], $showcoltype = false)
 {
     $columns = DB::getSchemaBuilder()->getColumnListing($table);
-    if (! empty($skip)) {
+    if (!empty($skip)) {
         $columns = array_diff($columns, $skip);
     }
 
@@ -133,14 +143,14 @@ function createField($field1, $type = 'text', $label = '', $placeholder = '', $r
     $field = [
         'type' => $type,
         'name' => $field1,
-        'label' => $label.$extra,
+        'label' => $label . $extra,
         'placeholder' => $placeholder,
         'required' => $type == 'file' ? false : $required,
         'value' => $value,
         'col' => $col,
     ];
 
-    if ($type == 'select' && ! empty($options)) {
+    if ($type == 'select' && !empty($options)) {
         $field['options'] = $options;
         $field['is_select2'] = true;
         $field['is_multiple'] = false;
@@ -230,30 +240,30 @@ function ghl_api_call($url = '', $method = 'get', $data = '', $headers = [], $js
 
     $baseurl = 'services.leadconnectorhq.com/';
     $url = str_replace([$baseurl, 'https://', 'http://'], '', $url);
-    $baseurl = 'https://'.$baseurl;
+    $baseurl = 'https://' . $baseurl;
     $version = get_default_settings('oauth_ghl_version', '2021-07-28');
     $location = get_setting($userId, 'location_id');
     $headers['Version'] = $version;
 
     if (strpos($url, 'custom') !== false && strpos($url, 'locations/') === false) {
-        $url = 'locations/'.$location.'/'.$url;
+        $url = 'locations/' . $location . '/' . $url;
     }
     if (strtolower($method) == 'get') {
         $urlap = (strpos($url, '?') !== false) ? '&' : '?';
         if (strpos($url, 'location_id=') === false && strpos($url, 'locationId=') === false && strpos($url, 'locations/') === false) {
             $url .= $urlap;
-            $url .= 'locationId='.$location;
+            $url .= 'locationId=' . $location;
         }
     }
     if ($token) {
-        $headers['Authorization'] = $bearer.$token;
+        $headers['Authorization'] = $bearer . $token;
     }
     $headers['Content-Type'] = 'application/json';
 
     $client = new \GuzzleHttp\Client(['http_errors' => false, 'headers' => $headers]);
     // dd($client);
     $options = [];
-    if (! empty($data)) {
+    if (!empty($data)) {
         $keycheck = 'form_data';
         $keycheck1 = 'form_multi';
         if (isset($data[$keycheck]) && is_array($data[$keycheck])) {
@@ -265,7 +275,7 @@ function ghl_api_call($url = '', $method = 'get', $data = '', $headers = [], $js
         }
     }
 
-    $url1 = $baseurl.$url;
+    $url1 = $baseurl . $url;
 
     $bd = null;
     try {
@@ -294,7 +304,7 @@ function ghl_api_call($url = '', $method = 'get', $data = '', $headers = [], $js
                 exit();
             }
             $tok = ghl_token(request(), '1');
-            if (! $tok) {
+            if (!$tok) {
                 response()->json(['Invalid Refresh token'])->send();
 
                 return $bd;
@@ -313,14 +323,14 @@ function ghl_token($request, $type = '', $method = 'view')
     $code = $request->code ?? $request;
     $code = ghl_oauth_call($code, $type);
 
-    if (! $code || ! property_exists($code, 'access_token')) {
+    if (!$code || !property_exists($code, 'access_token')) {
         return null;
     }
 
     $loc = $code->locationId ?? $request->location ?? '';
     $user = User::where('location_id', $loc)->orWhere('id', login_id())->first();
 
-    if (! $user) {
+    if (!$user) {
         if ($type == 1) {
             return false;
         }
@@ -340,7 +350,7 @@ function ghl_token($request, $type = '', $method = 'view')
     }
 }
 
-if (! function_exists('ghl_oauth_call')) {
+if (!function_exists('ghl_oauth_call')) {
     function ghl_oauth_call($code = '', $method = '')
     {
         $url = 'https://api.msgsndr.com/oauth/token';
@@ -357,7 +367,7 @@ if (! function_exists('ghl_oauth_call')) {
             if ($x > 0) {
                 $postv .= '&';
             }
-            $postv .= $key.'='.$value;
+            $postv .= $key . '=' . $value;
             $x++;
         }
         $curlfields = [
@@ -440,7 +450,7 @@ function save_in_settings($data, $userid = null)
                 'key' => $key,
             ];
 
-            if (! is_null($userid)) {
+            if (!is_null($userid)) {
                 $conditions['user_id'] = $userid;
             }
 
@@ -482,7 +492,7 @@ function getActions(array $actions = [], string $route = '')
     foreach ($actions as $key => $action) {
         $acs[$key] = [
             'title' => ucwords(str_replace('_', ' ', $key)),
-            'route' => $route.'.'.$key,
+            'route' => $route . '.' . $key,
             'extraclass' => $key == 'delete' ? 'confirm-delete deleted' : '',
         ];
     }
@@ -519,11 +529,11 @@ function ConnectOauth($loc, $token, $method = '')
 {
     $tokenx = false;
     $callbackurl = route('authorization.gohighlevel.callback');
-    $locurl = 'https://services.msgsndr.com/oauth/authorize?location_id='.$loc.'&response_type=code&userType=Location&redirect_uri='.$callbackurl.'&client_id='.superSetting('crm_client_id').'&scope=calendars.readonly calendars/events.write calendars/groups.readonly calendars/groups.write campaigns.readonly conversations.readonly conversations.write conversations/message.readonly conversations/message.write contacts.readonly contacts.write forms.readonly forms.write links.write links.readonly locations.write locations.readonly locations/customValues.readonly locations/customValues.write locations/customFields.readonly locations/customFields.write locations/tasks.readonly locations/tasks.write locations/tags.readonly locations/tags.write locations/templates.readonly medias.readonly medias.write opportunities.readonly opportunities.write surveys.readonly users.readonly users.write workflows.readonly snapshots.readonly oauth.write oauth.readonly calendars/events.readonly calendars.write businesses.write businesses.readonly';
+    $locurl = 'https://services.msgsndr.com/oauth/authorize?location_id=' . $loc . '&response_type=code&userType=Location&redirect_uri=' . $callbackurl . '&client_id=' . superSetting('crm_client_id') . '&scope=calendars.readonly calendars/events.write calendars/groups.readonly calendars/groups.write campaigns.readonly conversations.readonly conversations.write conversations/message.readonly conversations/message.write contacts.readonly contacts.write forms.readonly forms.write links.write links.readonly locations.write locations.readonly locations/customValues.readonly locations/customValues.write locations/customFields.readonly locations/customFields.write locations/tasks.readonly locations/tasks.write locations/tags.readonly locations/tags.write locations/templates.readonly medias.readonly medias.write opportunities.readonly opportunities.write surveys.readonly users.readonly users.write workflows.readonly snapshots.readonly oauth.write oauth.readonly calendars/events.readonly calendars.write businesses.write businesses.readonly';
 
     $client = new Client(['http_errors' => false]);
     $headers = [
-        'Authorization' => 'Bearer '.$token,
+        'Authorization' => 'Bearer ' . $token,
     ];
     $request = new Request('POST', $locurl, $headers);
     $res1 = $client->sendAsync($request)->wait();

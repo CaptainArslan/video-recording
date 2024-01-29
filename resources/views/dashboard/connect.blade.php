@@ -59,7 +59,7 @@
                 loadingStop();
                 console.log(data);
                 toastr.success("Location connected successfully!");
-                location.href = "{{ route('user') }}?v=" + new Date().getTime();
+                location.href = "{{ route('recordings.index') }}?v=" + new Date().getTime();
             },
             error: function(data) {
                 console.log("Error in ajax call : " + data);

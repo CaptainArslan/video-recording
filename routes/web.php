@@ -1,11 +1,12 @@
 <?php
 
-use App\Http\Controllers\ContactController;
-use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\PlanController;
-use App\Http\Controllers\SettingController;
-use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\PlanController;
+use App\Http\Controllers\UserController;
+use App\Http\Controllers\ContactController;
+use App\Http\Controllers\SettingController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\RecordingController;
 
 /*
 |--------------------------------------------------------------------------
@@ -22,11 +23,12 @@ Route::get('/', function () {
     return redirect()->route('login');
 });
 
-require __DIR__.'/auth.php';
+require __DIR__ . '/auth.php';
 
 Route::get('check/auth', [DashboardController::class, 'connect'])->name('auth.check');
 Route::get('check/auth/error', [DashboardController::class, 'authError'])->name('auth.error');
 Route::get('checking/auth', [DashboardController::class, 'authChecking'])->name('auth.checking');
+
 
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
@@ -60,10 +62,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
     Route::post('/settings', [SettingController::class, 'store'])->name('settings.store');
     Route::get('authorization/crm/oauth/callback', [SettingController::class, 'goHighLevelCallback'])->name('authorization.gohighlevel.callback');
-
     Route::get('/loginwith/{user}', [UserController::class, 'loginWith'])->name('users.loginwith');
     Route::get('/backtoadmin', [UserController::class, 'backToAdmin'])->name('backtoadmin');
 });
 
+Route::resource('recordings', RecordingController::class);
+
 // agency user login data
-Route::get('user', [UserController::class, 'index'])->name('user');
+// Route::get('user', [UserController::class, 'index'])->name('user');

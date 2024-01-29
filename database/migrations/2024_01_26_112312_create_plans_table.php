@@ -17,6 +17,7 @@ class CreatePlansTable extends Migration
             $table->id();
             $table->string('name', 100)->unique();
             $table->integer('price');
+            $table->integer('limit');
             $table->integer('recording_limit');
             $table->text('description')->nullable();
             $table->tinyInteger('status')->default(1);

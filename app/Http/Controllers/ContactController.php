@@ -98,7 +98,7 @@ class ContactController extends Controller
                 ->toJson();
         }
 
-        return view(self::VIEW.'.index', get_defined_vars());
+        return view(self::VIEW . '.index', get_defined_vars());
     }
 
     /**
@@ -110,7 +110,7 @@ class ContactController extends Controller
     {
         $formFields = getFormFields(self::TABLE, array_merge($this->skip, ['contact_id']));
 
-        return view(self::VIEW.'.store', get_defined_vars());
+        return view(self::VIEW . '.store', get_defined_vars());
     }
 
     /**
@@ -130,9 +130,9 @@ class ContactController extends Controller
         try {
             $contact = ghl_api_call('contacts/', 'POST', $data, [], true);
         } catch (\Throwable $th) {
-            Log::error('Error Occured while creating contact on CRM '.$th->getMessage());
+            Log::error('Error Occured while creating contact on CRM ' . $th->getMessage());
 
-            return redirect()->route(self::ROUTE.'.index')->with('error', 'Failed to create '.self::TITLE);
+            return redirect()->route(self::ROUTE . '.index')->with('error', 'Failed to create ' . self::TITLE);
         }
 
         Contact::create([
@@ -145,7 +145,7 @@ class ContactController extends Controller
             'location_id' => $location_id,
         ]);
 
-        return redirect()->route(self::ROUTE.'.index')->with('success', self::TITLE.' created successfully');
+        return redirect()->route(self::ROUTE . '.index')->with('success', self::TITLE . ' created successfully');
     }
 
     /**
@@ -167,7 +167,7 @@ class ContactController extends Controller
     {
         $formFields = getFormFields(self::TABLE, array_merge($this->skip, ['contact_id']), $contact);
 
-        return view(self::VIEW.'.edit', get_defined_vars());
+        return view(self::VIEW . '.edit', get_defined_vars());
     }
 
     /**
@@ -192,15 +192,15 @@ class ContactController extends Controller
 
         // Log the API call
         try {
-            ghl_api_call('contacts/'.$contact->contact_id, 'PUT', json_encode(capitalizeKeys($data)), [], true);
+            ghl_api_call('contacts/' . $contact->contact_id, 'PUT', json_encode(capitalizeKeys($data)), [], true);
         } catch (\Throwable $th) {
-            Log::error('Error Occured while updating contact on CRM '.$th->getMessage());
+            Log::error('Error Occured while updating contact on CRM ' . $th->getMessage());
         }
 
         // Update the local contact
         $contact->update($data);
 
-        return redirect()->route(self::ROUTE.'.index')->with('success', self::TITLE.' updated successfully');
+        return redirect()->route(self::ROUTE . '.index')->with('success', self::TITLE . ' updated successfully');
     }
 
     /**
@@ -211,13 +211,13 @@ class ContactController extends Controller
     public function destroy(Contact $contact)
     {
         try {
-            ghl_api_call('contatcs/'.$contact->contact_id, 'DELETE');
+            ghl_api_call('contatcs/' . $contact->contact_id, 'DELETE');
         } catch (\Throwable $th) {
-            Log::info('Error Occured while deleting Contact from crm : '.$th->getMessage());
+            Log::info('Error Occured while deleting Contact from crm : ' . $th->getMessage());
         }
         $contact->delete();
 
-        return redirect()->route(self::ROUTE.'.index')->with('success', self::TITLE.' deleted successfully');
+        return redirect()->route(self::ROUTE . '.index')->with('success', self::TITLE . ' deleted successfully');
     }
 
     /**
@@ -230,7 +230,7 @@ class ContactController extends Controller
         try {
             DB::beginTransaction();
             $response = ghl_api_call('contacts/', 'GET');
-            if (! empty($response->contacts)) {
+            if (!empty($response->contacts)) {
                 // Contact::where('user_id', login_id())->delete();
                 foreach ($response->contacts as $contact) {
                     Contact::updateOrCreate(
@@ -274,7 +274,7 @@ class ContactController extends Controller
         } catch (Throwable $th) {
             DB::rollBack();
 
-            return $this->respondWithError('Error occurred while fetching contacts!'.$th->getMessage());
+            return $this->respondWithError('Error occurred while fetching contacts!' . $th->getMessage());
         }
     }
 }

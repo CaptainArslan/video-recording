@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             PlanSeeder::class,
             UserSeeder::class,
+            RecordingSeeder::class,
         ]);
         Setting::insert([
             [
