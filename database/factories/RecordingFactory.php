@@ -17,7 +17,7 @@ class RecordingFactory extends Factory
         return [
             'user_id' => User::inRandomOrder()->first()->id,
             'title' => $this->faker->title() . " " . $this->faker->name(),
-            'description' => $this->faker->paragraph('20'),
+            'description' => $this->faker->text(50),
             'file' => $this->faker->url(),
             'thumbnail' => $this->faker->url(),
             'duration' => $this->faker->numberBetween(1, 10),

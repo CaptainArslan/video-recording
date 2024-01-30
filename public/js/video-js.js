@@ -4,7 +4,7 @@ var isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 var isEdge = /Edge/.test(navigator.userAgent);
 
 function applyAudioWorkaround() {
-    console.log('applyAudioWorkaround');
+    // console.log('applyAudioWorkaround');
     if (isSafari || isEdge) {
         if (isSafari && window.MediaRecorder !== undefined) {
             // this version of Safari has MediaRecorder
@@ -22,7 +22,7 @@ function applyAudioWorkaround() {
 }
 
 function applyVideoWorkaround() {
-    console.log('applyVideoWorkaround');
+    // console.log('applyVideoWorkaround');
     // use correct video mimetype for opera
     if (!!window.opera || navigator.userAgent.indexOf('OPR/') !== -1) {
         options.plugins.record.videoMimeType = 'video/webm\;codecs=vp8'; // or vp9
@@ -30,7 +30,7 @@ function applyVideoWorkaround() {
 }
 
 function applyScreenWorkaround() {
-    console.log('applyScreenWorkaround');
+    // console.log('applyScreenWorkaround');
     // Polyfill in Firefox.
     // See https://blog.mozilla.org/webrtc/getdisplaymedia-now-available-in-adapter-js/
     if (adapter.browserDetails.browser == 'firefox') {

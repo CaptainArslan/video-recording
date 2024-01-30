@@ -30,8 +30,8 @@ Route::get('check/auth/error', [DashboardController::class, 'authError'])->name(
 Route::get('checking/auth', [DashboardController::class, 'authChecking'])->name('auth.checking');
 
 
+Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 Route::middleware('auth')->group(function () {
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/profile', [UserController::class, 'profile'])->name('profile');
     Route::post('/profile', [UserController::class, 'updateProfile'])->name('profile.update');
     Route::get('/password', [UserController::class, 'password'])->name('password');

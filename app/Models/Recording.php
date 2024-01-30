@@ -10,4 +10,19 @@ class Recording extends Model
 {
     use HasFactory;
     use SoftDeletes;
+
+    protected $fillable = [
+        'user_id',
+        'title',
+        'description',
+        'file',
+        'thumbnail',
+        'duration',
+        'size',
+        'type',
+        'status',
+        'privacy',
+        'share',
+        'embed',
+    ];
 }

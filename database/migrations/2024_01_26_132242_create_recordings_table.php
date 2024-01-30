@@ -18,12 +18,12 @@ class CreateRecordingsTable extends Migration
             $table->foreignId('user_id')->constrained('users');
             $table->string('title');
             $table->longText('description')->nullable();
-            $table->string('file');
-            $table->string('thumbnail');
-            $table->string('duration');
-            $table->string('size');
+            $table->longText('file');
+            $table->longText('thumbnail');
+            $table->string('duration')->nullable();
+            $table->string('size')->nullable();
             $table->string('type')->nullable();
-            $table->string('status');
+            $table->tinyInteger('status')->default(1);
             $table->string('privacy')->nullable();
             $table->string('share')->nullable();
             $table->string('embed')->nullable();

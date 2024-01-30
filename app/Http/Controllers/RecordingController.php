@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Recording;
+use Illuminate\Http\Request;
 
 class RecordingController extends Controller
 {
@@ -49,5 +50,10 @@ class RecordingController extends Controller
     {
         $recordings = Recording::paginate(getPaginate());
         return view('recording.index', get_defined_vars());
+    }
+
+    public function store(Request $request)
+    {
+        dd($request->all());
     }
 }
