@@ -25,4 +25,9 @@ class Recording extends Model
         'share',
         'embed',
     ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 }

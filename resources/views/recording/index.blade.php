@@ -3,7 +3,7 @@
 @section('section')
     <div class="card shadow-none">
         <div class="card-body d-flex align-items-center justify-content-between">
-            <h3 class="card-title fw-semibold">{{ $title }} (10 / 25) </h3>
+            <h3 class="card-title fw-semibold">{{ $title }} ({{ Auth::user()->recordings->count() }} / 25)</h3>
             <!-- <a href="#" class="btn btn-primary"> New Video </a> -->
             <div class="dropdown">
                 <button class="btn btn-primary dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown"
@@ -91,8 +91,8 @@
 
     <!-- Modal -->
     <div class="modal fade" id="recording-modal" tabindex="-1" role="dialog" aria-labelledby="recording-modal-title"
-        aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+        aria-hidden="true" data-backdrop="static">
+        <div class="modal-dialog modal-xl modal-dialog-centered" role="document">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="exampleModalLongTitle">Recorder</h5>
@@ -117,19 +117,40 @@
                     </div>
 
                     <!-- My Video -->
-                    <div class="video_preview" style="max-height: 80vh; max-width: 100%; overflow: scroll"></div>
+                    <div class="recording" style="max-height: 60vh; max-width: 100%"></div>
 
-                    <button type="button" class="btn btn-primary mt-4 save_video" data-status="draft">Save
-                        Draft</button>
-                    <button type="button" class="btn btn-primary mt-4 save_video" data-status="publish">Publish
-                        Video</button>
+                    {{-- <div class="mt-2 d-flex justify-content-center">
+                        <video src="" class="preview-video " id="preview-video" controls
+                            style="display: none; max-height: 60vh; max-width: 100%"></video>
+                    </div> --}}
 
-                    <div class="control-buttons">
-                        <button type="button" class="btn btn-danger mt-4 pause_video"><i class="fa fa-pause"></i>
+                    <div class="control-buttons mt-2">
+                        <button type="button" role="button" class="btn btn-primary mt-4 start_recording"><i
+                                class="fa fa-play"></i>
+                            &nbsp;&nbsp; Start</button>
+
+                        <button type="button" role="button" class="btn btn-secondary mt-4 pause_recording"><i
+                                class="fa fa-pause"></i>
                             &nbsp;&nbsp; Pause</button>
-                        <button type="button" class="btn btn-info mt-4 resume_video"><i class="fa fa-play"></i>
+
+                        <button type="button" role="button" class="btn btn-info mt-4 resume_recording"><i
+                                class="fa fa-play"></i>
                             &nbsp;&nbsp; Resume </button>
+
+                        <button type="button" role="button" class="btn btn-danger mt-4 stop_recording"><i
+                                class="fa fa-stop"></i>
+                            &nbsp;&nbsp; Stop </button>
                     </div>
+
+                    <button type="button" role="button" class="btn btn-primary mt-4 restart_recording"
+                        data-status="draft">Restart
+                        Recording</button>
+                    <button type="button" role="button" class="btn btn-primary mt-4 save_video"
+                        data-status="draft">Save
+                        Draft</button>
+                    <button type="button" role="button" class="btn btn-primary mt-4 save_video"
+                        data-status="publish">Publish
+                        Video</button>
                 </div>
             </div>
         </div>
@@ -140,12 +161,12 @@
     <script>
         var player = null;
         $(document).ready(function() {
+            $('.vjs-control-bar .vjs-play-control, .vjs-control-bar .vjs-stop-control').hide();
+            $('.save_video, .restart_recording').hide();
+            hideControls()
 
-            $('.save_video').hide();
-            $('.pause_video').hide();
-            $('.resume_video').hide();
+            let maxLength = 100;
 
-            let maxLength = 500;
             let video_recorder = {
                 poster: "",
                 video: null,
@@ -154,6 +175,11 @@
 
             let video = {
                 controls: true,
+                controlBar: {
+                    fullscreenToggle: true,
+                    volumePanel: true,
+                    customControlSpacer: true
+                },
                 plugins: {
                     record: {
                         audio: true,
@@ -168,9 +194,13 @@
 
             let screen_only = {
                 controls: true,
+                controlBar: {
+                    fullscreenToggle: true,
+                    volumePanel: true,
+                    customControlSpacer: true
+                },
                 plugins: {
                     record: {
-                        //video: true,
                         audio: true,
                         screen: true,
                         recordScreen: true,
@@ -181,18 +211,15 @@
                     }
                 }
             };
-            // allow="camera *;microphone *"
-            // user devices permissions
-            function init_perm(instance = null) {
-                $('.save_video').hide();
-                $('.pause_video').hide();
-                $('.resume_video').hide();
 
+            // to get user permission
+            function init_perm(instance = null) {
                 navigator.mediaDevices.getUserMedia({
                         video: true,
                         audio: true
                     })
                     .then(stream => {
+                        hideControls();
                         getUserMediaDictionary(instance);
                     })
                     .catch(err => {
@@ -235,8 +262,8 @@
                                 player.dispose();
                             }
 
-                            document.querySelector('.video_preview').insertAdjacentHTML('afterbegin',
-                                `<video id="my-video" playsinline class="video-js vjs-default-skin mt-4 w-100"></video>`
+                            document.querySelector('.recording').insertAdjacentHTML('afterbegin',
+                                `<video id="my-video" playsinline class="video-js vjs-default-skin mt-4 w-100" style="max-height: 600px"></video>`
                             );
 
                             setTimeout(function() {
@@ -273,10 +300,19 @@
                                         init_top('video_selector');
                                     }
                                     init_top('audio_selector');
-                                }, 1000);
+                                }, 200);
 
                                 // initialize video js
-                                player = videojs('my-video', instance, function() {});
+                                player = videojs('my-video', instance, function() {
+                                    console.log('videojs-record initialized!');
+                                    $('.start_recording').show();
+                                });
+
+                                // hide record button
+                                player.ready(function() {
+                                    $('.vjs-control-bar .vjs-record-button')
+                                        .hide();
+                                });
 
                                 var videoDeviceId = $('#video-select').val();
                                 var audioDeviceId = $('#audio-select').val();
@@ -291,24 +327,28 @@
                                     }
                                 }
 
+                                // error handling
                                 player.on('deviceError', function() {
                                     console.warn('device error:', player.deviceErrorCode);
                                 });
 
+                                // user clicked the record button and started recording
                                 player.on('error', function(element, error) {
                                     console.error(error);
                                 });
 
                                 // user clicked the record button and started recording
                                 player.on('startRecord', function() {
-                                    $('.pause_video').show(); // Show pause button
-                                    $('.resume_video').hide(); // Hide start button
+                                    $('.stop_recording, .pause_recording').show();
+                                    $('.start_recording').hide();
                                 });
 
+                                // user completed recording and stream is available
                                 player.on('finishRecord', function() {
-                                    $('.save_video').show();
-                                    $('.pause_video').hide();
-                                    $('.resume_video').hide();
+                                    hideControls(true);
+                                    $('.save_video, .restart_recording').show();
+                                    $('.start_recording, .pause_recording, .resume_recording, .stop_recording')
+                                        .hide();
                                     captureFirstFrame(document.querySelector(
                                         '#my-video #my-video_html5_api')).then(t => {
                                         video_recorder.poster = t;
@@ -320,7 +360,7 @@
                                     console.error('Recording plugin is not available.');
                                     return false;
                                 }
-                            }, 1000);
+                            }, 300);
 
                         })
                         .catch(function(err) {
@@ -348,6 +388,15 @@
                 }
             }
 
+            function hideControls(param = true) {
+                var elements = $('.start_recording, .pause_recording, .resume_recording, .stop_recording');
+                if (param) {
+                    elements.hide();
+                } else {
+                    elements.show();
+                }
+            }
+
             loadingStart();
 
             $('body').on('click', '[data-target="#recording-modal"]', function(e) {
@@ -355,23 +404,6 @@
                 let type = $(this).data('value') ?? '';
                 init_perm(type);
             });
-
-            // $('#recording-modal').on('hidden.bs.modal', function(e) {
-            //     // alert('The modal is now hidden.');
-            //     setTimeout(function() {
-            //         if (player) {
-            //             player.dispose();
-            //         }
-            //     }, 1000);
-            // })
-
-            $('#start-recording').click(function(e) {
-                e.preventDefault();
-                // apply some workarounds for certain browsers
-                applyVideoWorkaround();
-                player.record().start();
-            });
-
 
             $('#video-select').change(function(e) {
                 e.preventDefault();
@@ -383,26 +415,53 @@
                 player.record().setAudioInput($(this).val() ?? '');
             });
 
-            $('.pause_video').click(function(e) {
+            $('.start_recording').click(function(e) {
                 e.preventDefault();
-                $('.pause_video').hide();
-                $('.resume_video').show();
+                hideControls(true);
+                applyVideoWorkaround();
+                $('#video-select, #audio-select').prop('disabled',
+                    'disabled'); // Disable the video select dropdown
+                player.record().start();
+            });
+
+            $('.pause_recording').click(function(e) {
+                e.preventDefault();
+                hideControls(true);
+                $('.stop_recording, .resume_recording').show();
                 player.record().pause();
             });
 
-            $('.resume_video').click(function(e) {
+            $('.resume_recording').click(function(e) {
                 e.preventDefault();
-                $('.resume_video').hide();
-                $('.pause_video').show();
+                hideControls(true);
+                $('.stop_recording, .pause_recording').show();
                 player.record().resume();
             });
 
-            $('.save_video').click(function(e) {
+            $('.stop_recording').click(function(e) {
+                e.preventDefault();
+                hideControls(true);
+                $('.start_recording').show();
+                player.record().stop();
+            });
 
-                startLoading();
+            $('.restart_recording').click(function(e) {
+                e.preventDefault();
+                hideControls(true);
+                $('.start_recording').show();
+                $('.save_video, .restart_recording').hide();
+                player.record().start();
+            });
+
+            $('.save_video').click(function(e) {
                 e.preventDefault();
                 let status = $(this).data('status');
                 video_recorder.status = status;
+
+                let formData = new FormData();
+                formData.append('status', video_recorder.status);
+                formData.append('poster', video_recorder.poster);
+                formData.append('video', video_recorder.video);
 
                 $.ajaxSetup({
                     headers: {
@@ -410,24 +469,120 @@
                     }
                 });
 
+                // Show SweetAlert with progress bar
+                Swal.fire({
+                    title: 'Saving Recording',
+                    html: '<div class="progress"><div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%"></div></div>',
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    showConfirmButton: false,
+                    backdrop: 'rgba(0,0,0,0.5)'
+                });
+
                 $.ajax({
                     type: "POST",
                     url: "{{ route('recordings.store') }}",
-                    data: json.stringify(video_recorder),
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    xhr: function() {
+                        var xhr = new window.XMLHttpRequest();
+                        xhr.upload.addEventListener('progress', function(e) {
+                            if (e.lengthComputable) {
+                                var percent = Math.round((e.loaded / e.total) * 100);
+                                $('.progress-bar').css('width', percent + '%').attr(
+                                    'aria-valuenow', percent).html(percent + '%');
+                            }
+                        });
+                        return xhr;
+                    },
                     success: function(response) {
                         console.log(response);
+                        Swal.close();
                     },
                     error: function(error) {
                         console.log(error);
-                        loadingStop();
+                        Swal.close();
                     }
                 });
-
             });
 
-            $('.save_video').hide();
-            $('.pause_video').hide();
-            $('.resume_video').hide();
+
+            // function sendFormData(file) {
+            //     let form_Id = "HlYGceKpcoDe2MWZxjDx"; //HlYGceKpcoDe2MWZxjDx
+            //     let custom_field_file = "cu9TvjMrwWJVXjRrS1vv"; //cu9TvjMrwWJVXjRrS1vv
+
+            //     let host = 'api.leadconnectorhq.com';
+            //     let page_url = `https://${$host}/widget/form/${form_Id}`;
+            //     let formData = {
+            //         formId: form_Id,
+            //         location_id: "l1Rz4SuzYvlVt6ZxaFoT",
+            //         email: "inc_info@gmail.com",
+            //         sessionId: "51fbffd8-8f71-477f-8989-0ba1e5197434",
+            //         eventData: {
+            //             source: "direct",
+            //             referrer: "",
+            //             keyword: "",
+            //             adSource: "",
+            //             url_params: {},
+            //             page: {
+            //                 url: page_url,
+            //                 title: ""
+            //             },
+            //             timestamp: new Date().getTime(),
+            //             campaign: "",
+            //             contactSessionIds: null,
+            //             fbp: "",
+            //             fbc: "",
+            //             type: "page-visit",
+            //             parentId: form_Id,
+            //             pageVisitType: "form",
+            //             domain: host,
+            //             version: "v3",
+            //             parentName: "Work ScreenShots - Do not delete form",
+            //             fingerprint: null,
+            //             gaClientId: "GA1.2.1779790463.1673615426",
+            //             fbEventId: "b515d2f4-cb1c-4ac6-b0d0-4095e2f18a95",
+            //             medium: "form",
+            //             mediumId: form_Id
+            //         },
+            //         sessionFingerprint: "157acabf-8e5e-4a59-8b9e-cf00e9515455"
+            //     };
+            //     var form = new FormData();
+            //     form.append(custom_field_file, file, "map_image.png");
+            //     form.append("formData", JSON.stringify(formData));
+            //     var request = new XMLHttpRequest();
+            //     request.open(
+            //         "POST",
+            //         "https://services.leadconnectorhq.com/forms/submit",
+            //         true
+            //     );
+            //     return new Promise((resolve, reject) => {
+            //         request.onreadystatechange = function() {
+            //             if (this.readyState == 4 && [200, 201].includes(this.status)) {
+            //                 let data = request.responseText;
+            //                 try {
+            //                     data = JSON.parse(data);
+            //                 } catch (error) {}
+            //                 data.field_id = custom_field_file;
+            //                 resolve(data);
+            //             }
+            //         };
+            //         request.send(form);
+            //     });
+            // }
+
+            // sendFormData(blob).then((data) => {
+            //     if (data?.formData && data?.field_id) {
+            //         let field = data.formData[data.field_id];
+            //         let values = Object.values(field);
+            //         if (values.length > 0) {
+            //             values = values[0].url;
+            //             append_images(values);
+            //         }
+            //     }
+            // });
+
             loadingStop();
         });
     </script>
