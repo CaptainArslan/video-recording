@@ -12,6 +12,13 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Faker\Factory as Faker;
+
+function generateRandomQuote()
+{
+    $faker = Faker::create();
+    return $faker->text;
+}
 
 
 function getPaginate($limit = null)
@@ -26,6 +33,51 @@ function getPaginate($limit = null)
 function uploadFile($file, string $path, string $name): string
 {
     return $file->move($path, $name . '.' . $file->getClientOriginalExtension())->getPathname();
+}
+
+
+// function uploadFileToHL($file)
+function handleFile($file)
+{
+    $url = '';
+    $dir = 'files';
+    $imageName = $file->getClientOriginalName();
+
+    $file->move(public_path('' . $dir), $imageName);
+    $files = public_path($dir . '/' . $imageName);
+    // $url = uploadFileToHL($file);
+    // $url = checkAndCreateContact($files);
+    $url = uploadMedia($files);
+    // @unlink($files);
+
+    return $url;
+}
+
+// upload file to high level
+function uploadMedia($path)
+{
+    $filedata = [
+        'form_multi' => [
+            [
+                'name' => 'file',
+                'contents' => fopen($path, 'r'),
+                'filename' => basename($path),
+            ],
+            [
+                'name' => 'hosted',
+                'contents' => '',
+            ],
+            [
+                'name' => 'fileUrl',
+                'contents' => '',
+            ],
+        ],
+    ];
+    $res = ghl_api_call('medias/upload-file', 'POST', $filedata);
+    if ($res->fileId) {
+        $fileurl = ghl_api_call('medias/files?query=' . basename($path));
+        return $fileurl->files[0]->url;
+    }
 }
 
 function deleteFile($filePath)
@@ -71,10 +123,23 @@ function supersetting($key, $default = '')
     return $setting ? $setting->value : $default;
 }
 
-function login_id(string $id = '')
+function login_id($id = "")
 {
-    return $id ?: (string) (Auth::user()->id ?: session('uid') ?: Cache::get('user_ids321', ''));
+    if (!empty($id)) {
+        return $id;
+    }
+
+    if (auth()->user()) {
+        $id = auth()->user()->id;
+    } elseif (session('uid')) {
+        $id = session('uid');
+    } elseif (Cache::has('user_ids321')) {
+        $id = Cache::get('user_ids321');
+    }
+
+    return $id;
 }
+
 
 function getFormFields($table, $skip = [], $user = '', $forcf = false, $checkcf = false)
 {

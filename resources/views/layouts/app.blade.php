@@ -24,6 +24,8 @@
     <!-- videojs-record CSS -->
     <link href="https://unpkg.com/videojs-record/dist/css/videojs.record.min.css" rel="stylesheet">
 
+    @yield('css')
+
 </head>
 
 <body>

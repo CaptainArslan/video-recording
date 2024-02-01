@@ -79,7 +79,7 @@ class User extends Authenticatable implements JWTSubject
 
     public function plans(): BelongsToMany
     {
-        return $this->belongsToMany(Plan::class);
+        return $this->belongsToMany(Plan::class)->withPivot('start_date', 'end_date', 'status')->withTimestamps();
     }
 
     public function recordings(): HasMany
@@ -131,7 +131,6 @@ class User extends Authenticatable implements JWTSubject
     {
         return trim("{$this->first_name} {$this->last_name}") ?: $this->name;
     }
-
     //     public function getPlanName()
     //     {
     //         return ucfirst(trim($this->plan->name));

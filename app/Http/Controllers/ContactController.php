@@ -277,4 +277,27 @@ class ContactController extends Controller
             return $this->respondWithError('Error occurred while fetching contacts!' . $th->getMessage());
         }
     }
+
+
+    public function contacts()
+    {
+        try {
+            $response = ghl_api_call('contacts/', 'GET');
+            return response()->json(['success' => true, 'message' => 'Contacts data', 'data' => $response]);
+        } catch (\Throwable $th) {
+            //throw $th;
+            return response()->json(['success' => false, 'message' => 'Error Occured while fetching contacts']);
+        }
+    }
+
+    public function tags()
+    {
+        try {
+            $response = ghl_api_call('tags/', 'GET');
+            return response()->json(['success' => true, 'message' => 'Contacts data', 'data' => $response]);
+        } catch (\Throwable $th) {
+            //throw $th;
+            return response()->json(['success' => false, 'message' => 'Error Occured while fetching contacts']);
+        }
+    }
 }

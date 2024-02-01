@@ -41,19 +41,19 @@ class DashboardController extends Controller
 
     public function index()
     {
-        return view(self::VIEW.'.index');
+        return view(self::VIEW . '.index');
     }
 
     public function connect()
     {
-        return view(self::VIEW.'.connect');
+        return view(self::VIEW . '.connect');
     }
 
     public function handleAuth($token, $res, $locurl)
     {
         $client = new Client(['http_errors' => false]);
         $headers = [
-            'Authorization' => 'Bearer '.$token,
+            'Authorization' => 'Bearer ' . $token,
         ];
         $request = new Psr7Request('POST', $locurl, $headers);
         $res1 = $client->sendAsync($request)->wait();
@@ -81,12 +81,12 @@ class DashboardController extends Controller
             if ($req->has('location') && $req->has('token')) {
                 $location = $req->location;
                 $user = User::where('location_id', $req->location)->first();
-                if (! $user) {
+                if (!$user) {
                     // aapi call
                     $user = new User();
                     $user->first_name = 'Test';
                     $user->last_name = 'User';
-                    $user->email = $location.'@gmail.com';
+                    $user->email = $location . '@gmail.com';
                     $user->password = bcrypt('shada2e3ewdacaeedd233edaf');
                     $user->location_id = $location;
                     $user->ghl_api_key = $req->token;
@@ -118,7 +118,7 @@ class DashboardController extends Controller
                 if ($token) {
                     request()->code = $token;
                     $res->crm_connected = ghl_token(request(), '1', 'eee');
-                    if (! $res->crm_connected) {
+                    if (!$res->crm_connected) {
                         $res = ConnectOauth($req->location, $res->token);
                     }
                 } else {
@@ -135,6 +135,6 @@ class DashboardController extends Controller
 
     public function authError()
     {
-        return view(self::VIEW.'.error');
+        return view(self::VIEW . '.error');
     }
 }

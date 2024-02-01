@@ -29,7 +29,6 @@ Route::get('check/auth', [DashboardController::class, 'connect'])->name('auth.ch
 Route::get('check/auth/error', [DashboardController::class, 'authError'])->name('auth.error');
 Route::get('checking/auth', [DashboardController::class, 'authChecking'])->name('auth.checking');
 
-
 Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [UserController::class, 'profile'])->name('profile');
@@ -66,7 +65,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/backtoadmin', [UserController::class, 'backToAdmin'])->name('backtoadmin');
 });
 
+
 Route::resource('recordings', RecordingController::class);
+Route::get('contact', [ContactController::class, 'contacts'])->name('ghl.contacts');
+Route::get('tags', [ContactController::class, 'tags'])->name('ghl.tags');
 
 // agency user login data
 // Route::get('user', [UserController::class, 'index'])->name('user');

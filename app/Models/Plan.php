@@ -20,7 +20,7 @@ class Plan extends Model
 
     public function userS(): BelongsToMany
     {
-        return $this->belongsToMany(User::class);
+        return $this->belongsToMany(User::class)->withPivot('start_date', 'end_date', 'status')->withTimestamps();
     }
 
     public function getStatus()

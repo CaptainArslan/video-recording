@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
 use App\Models\Recording;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 
 class RecordingController extends Controller
 {
@@ -46,14 +48,48 @@ class RecordingController extends Controller
         ]);
     }
 
+
     public function index()
     {
-        $recordings = Recording::paginate(getPaginate());
+        $userId = login_id();
+        $user = User::findOrFail($userId);
+        // dd($user->plans->toArray());
+        $recordings = Recording::where('user_id', $userId)->latest()->paginate(getPaginate());
         return view('recording.index', get_defined_vars());
     }
 
     public function store(Request $request)
     {
-        dd($request->all());
+        $recording = new Recording();
+        $recording->user_id = login_id();
+
+        $recording->title = Carbon::now()->format('Y-m-d H:i:s');
+
+        $recording->description = generateRandomQuote();
+        $recording->file = $request->video;
+        $recording->file_url = $request->videoUrl;
+        $recording->poster = $request->poster;
+        $recording->poster_url = $request->posterUrl;
+        $recording->status = $request->status;
+
+        $recording->duration = $request->duration ?? null;
+        $recording->size = $request->size ?? null;
+        $recording->type = $request->type ?? null;
+        $recording->privacy = $request->privacy ?? null;
+        $recording->share = $request->share ?? null;
+        $recording->embed = $request->embed ?? null;
+
+        // $recording->video = $video;
+        if ($recording->save()) {
+            return response()->json(['success' => true, 'message' => 'Recording created successfully']);
+        }
+        return response()->json(['success' => false, 'message' => 'Error Occured while creating recording']);
+    }
+
+
+    public function show($id)
+    {
+        $recording = Recording::findOrFail(decrypt($id));
+        return view('recording.show', get_defined_vars());
     }
 }
