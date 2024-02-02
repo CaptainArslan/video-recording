@@ -15,10 +15,10 @@ class CreatePlansTable extends Migration
     {
         Schema::create('plans', function (Blueprint $table) {
             $table->id();
-            $table->string('name', 100)->unique();
+            $table->string('title')->unique();
             $table->integer('price');
             $table->integer('limit');
-            $table->integer('recording_limit');
+            $table->integer('recording_minutes_limit');
             $table->text('description')->nullable();
             $table->tinyInteger('status')->default(1);
             $table->timestamps();

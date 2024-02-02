@@ -15,10 +15,10 @@ class Plan extends Model
     protected $table = 'plans';
 
     protected $fillable = [
-        'name', 'price', 'recording_limit', 'description', 'status',
+        'title', 'price', 'limit', 'recording_minutes_limit', 'description', 'status',
     ];
 
-    public function userS(): BelongsToMany
+    public function users(): BelongsToMany
     {
         return $this->belongsToMany(User::class)->withPivot('start_date', 'end_date', 'status')->withTimestamps();
     }

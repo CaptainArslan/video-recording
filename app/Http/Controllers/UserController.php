@@ -22,13 +22,13 @@ class UserController extends Controller
 
     const ROUTE = 'users';
 
-    protected $skip = ['id', 'remember_token', 'created_at', 'updated_at', 'email_verified_at', 'added_by', 'location_id'];
+    protected $skip = ['id', 'first_name', 'last_name',  'remember_token', 'created_at', 'updated_at', 'email_verified_at', 'added_by', 'ghl_api_key'];
 
     protected $actions = [
         'edit' => true,
-        'destroy' => true,
-        'status' => true,
-        'loginwith' => true,
+        // 'destroy' => true,
+        // 'status' => true,
+        // 'loginwith' => true,
     ];
 
     protected $validation = [
@@ -76,7 +76,7 @@ class UserController extends Controller
                 ->toJson();
         }
 
-        return view(self::VIEW.'.index', get_defined_vars());
+        return view(self::VIEW . '.index', get_defined_vars());
     }
 
     public function create()
@@ -84,7 +84,7 @@ class UserController extends Controller
         $this->skip = array_merge($this->skip, ['status', 'role', 'name', 'image']);
         $formFields = getFormFields(self::TABLE, $this->skip);
 
-        return view(self::VIEW.'.store', get_defined_vars());
+        return view(self::VIEW . '.store', get_defined_vars());
     }
 
     public function store(Request $request)
@@ -106,14 +106,14 @@ class UserController extends Controller
             'role' => is_role() == 'company' ? 2 : 1,
         ]);
 
-        return redirect()->route(self::ROUTE.'.index')->with('success', 'User created successfully');
+        return redirect()->route(self::ROUTE . '.index')->with('success', 'User created successfully');
     }
 
     public function show($id)
     {
         $user = User::findOrFail($id);
 
-        return view(self::VIEW.'.show', compact('user'));
+        return view(self::VIEW . '.show', compact('user'));
     }
 
     public function edit(User $user)
@@ -122,7 +122,7 @@ class UserController extends Controller
         $this->skip = array_merge($this->skip, ['status', 'role', 'name', 'image', 'password']);
         $formFields = getFormFields(self::TABLE, $this->skip, $user);
 
-        return view(self::VIEW.'.edit', get_defined_vars());
+        return view(self::VIEW . '.edit', get_defined_vars());
     }
 
     public function update(Request $request, User $user)
@@ -130,7 +130,7 @@ class UserController extends Controller
         $request->validate([
             'first_name' => 'required|string',
             'last_name' => 'required|string',
-            'email' => 'required|email|unique:users,email,'.$user->id,
+            'email' => 'required|email|unique:users,email,' . $user->id,
             'password' => 'nullable|min:6',
         ]);
 
@@ -144,7 +144,7 @@ class UserController extends Controller
 
         $user->save();
 
-        return redirect()->route(self::VIEW.'.index')->with('success', 'User updated successfully');
+        return redirect()->route(self::VIEW . '.index')->with('success', 'User updated successfully');
     }
 
     public function destroy(User $user)
@@ -152,16 +152,16 @@ class UserController extends Controller
         // $user = User::findOrFail($id);
         $user->delete();
 
-        return redirect()->route(self::ROUTE.'.index')->with('success', 'User deleted successfully');
+        return redirect()->route(self::ROUTE . '.index')->with('success', 'User deleted successfully');
     }
 
     public function status(User $user)
     {
         // $user = User::find($id);
-        $user->status = ! $user->status;
+        $user->status = !$user->status;
         $user->save();
 
-        return redirect()->route(self::ROUTE.'.index')->with('success', ' Status updated successfully');
+        return redirect()->route(self::ROUTE . '.index')->with('success', ' Status updated successfully');
     }
 
     public function profile(Request $request)
@@ -171,7 +171,7 @@ class UserController extends Controller
 
         $passwordFields = $this->getPasswordFields();
 
-        return view(self::VIEW.'.profile', get_defined_vars());
+        return view(self::VIEW . '.profile', get_defined_vars());
     }
 
     public function updateProfile(Request $request)
@@ -181,9 +181,9 @@ class UserController extends Controller
 
         if ($request->hasFile('image')) {
             if ($user->image) {
-                deleteFile('uploads/profile'.$user->image);
+                deleteFile('uploads/profile' . $user->image);
             }
-            $user->image = uploadFile($request->file('image'), 'uploads/profile', $request->first_name.'-'.$request->last_name.'-'.time());
+            $user->image = uploadFile($request->file('image'), 'uploads/profile', $request->first_name . '-' . $request->last_name . '-' . time());
         }
 
         $user->fill([
@@ -201,7 +201,7 @@ class UserController extends Controller
     {
         $passwordFields = $this->getPasswordFields();
 
-        return view(self::VIEW.'.password', get_defined_vars());
+        return view(self::VIEW . '.password', get_defined_vars());
     }
 
     public function updatePassword(Request $request)
@@ -218,7 +218,7 @@ class UserController extends Controller
         $user->password = Hash::make($request->password);
         $user->save();
 
-        return redirect()->route(self::ROUTE.'.index')->with('success', 'Password updated Successfully!');
+        return redirect()->route(self::ROUTE . '.index')->with('success', 'Password updated Successfully!');
     }
 
     public function getPasswordFields()

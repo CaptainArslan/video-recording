@@ -20,6 +20,9 @@ class CreateRecordingsTable extends Migration
             $table->longText('description')->nullable();
             $table->binary('file')->nullable();
             $table->string('file_url')->nullable();
+
+            $table->string('short_url')->nullable();
+
             $table->binary('poster')->nullable();
             $table->string('poster_url')->nullable();
             $table->string('duration')->nullable();
@@ -27,7 +30,7 @@ class CreateRecordingsTable extends Migration
 
             $table->string('size')->nullable();
             $table->string('type')->nullable();
-            $table->string('privacy')->nullable();
+            $table->tinyInteger('make_it_private')->nullable();
             $table->string('share')->nullable();
             $table->string('embed')->nullable();
             $table->timestamps();

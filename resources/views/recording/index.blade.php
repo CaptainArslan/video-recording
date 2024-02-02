@@ -7,17 +7,17 @@
     <div class="card shadow-none">
         <div class="card-body d-flex align-items-center justify-content-between">
             <h3 class="card-title fw-semibold">{{ $title }} ({{ $user->recordings->count() }} / 25)</h3>
-            <!-- <a href="#" class="btn btn-primary"> New Video </a> -->
+            <!-- <a href="javascript:void(0)" class="btn btn-primary"> New Video </a> -->
             <div class="dropdown">
                 <button class="btn btn-primary dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown"
                     aria-haspopup="true" aria-expanded="false">
                     New Video
                 </button>
                 <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-                    <button class="dropdown-item text-dark" href="#" type="button" class="btn btn-primary"
+                    <button class="dropdown-item text-dark" href="javascrip:void(0)" type="button" class="btn btn-primary"
                         data-value="video" data-toggle="modal" data-target="#recording-modal"> <i class="fa fa-video-camera"
                             aria-hidden="true"></i> &nbsp;&nbsp; Record a Video</button>
-                    <button class="dropdown-item text-dark" href="#" type="button" class="btn btn-primary"
+                    <button class="dropdown-item text-dark" href="javascrip:void(0)" type="button" class="btn btn-primary"
                         data-value="screen" data-toggle="modal" data-target="#recording-modal"> <i
                             class="fa fa-video-camera" aria-hidden="true"></i> &nbsp;&nbsp; Record a Screen</button>
                 </div>
@@ -61,32 +61,37 @@
                                     </a>
                                     <div class="card-body">
                                         <div class="d-flex justify-content-between">
-                                            <h5 class="card-title">{{ $recording->title }}</h5>
+                                            <h5 class="card-title">{{ formatTimestamp($recording->title, 'M d, Y') }}</h5>
                                             <div class="dropdown d-inline-block ml-2">
-                                                <a href="#" class="dropdown-toggle" role="button" id="action-buttons"
-                                                    data-toggle="dropdown" aria-expanded="false" data-bs-toggle="actions">
+                                                <a href="javascript:void(0)" class="dropdown-toggle" role="button"
+                                                    id="action-buttons" data-toggle="dropdown" aria-expanded="false"
+                                                    data-bs-toggle="actions">
                                                     <i class="fas fa-ellipsis-h"></i>
                                                 </a>
                                                 <div class="dropdown-menu" aria-labelledby="action-buttons">
-                                                    <a class="dropdown-item" href="#">Edit</a>
+                                                    <a class="dropdown-item" href="javascript:void(0)" data-toggle="modal"
+                                                        data-target="#edit-recording-modal"
+                                                        data-title="{{ $recording->title }}"
+                                                        data-description="{{ $recording->description }}"
+                                                        data-url="{{ route('recordings.update', $recording->id) }}">Edit</a>
                                                 </div>
                                             </div>
                                         </div>
                                         <p class="card-text">{{ $recording->description }}.</p>
                                         <div class="">
                                             <button class="btn btn-danger share" data-bs-toggle="tooltip"
-                                                data-value="{{ encrypt($recording->id) }}" title="Share">
+                                                data-value="{{ $recording->id }}" title="Share">
                                                 <i class="fa fa-user-plus" data-toggle="modal"
                                                     data-target="#share-modal"></i>
                                             </button>
-                                            <button class="btn btn-info copy-iframe" data-bs-toggle="tooltip"
+                                            {{-- <button class="btn btn-info copy-iframe" data-bs-toggle="tooltip"
                                                 data-link="{{ $recording->file_url }}" title="Copy iframe ">
                                                 <i class="fa fa-code" aria-hidden="true"></i>
                                             </button>
                                             <button class="btn btn-secondary copy-link" data-bs-toggle="tooltip"
                                                 data-link="{{ $recording->file_url }}" title="Copy link">
                                                 <i class="fa fa-clone" aria-hidden="true"></i>
-                                            </button>
+                                            </button> --}}
                                         </div>
                                     </div>
                                 </div>
@@ -175,18 +180,56 @@
         </div>
     </div>
 
+    <!-- edit Record Modal -->
+    <div class="modal fade" id="edit-recording-modal" tabindex="-1" role="dialog"
+        aria-labelledby="edit-recording-modal-title" aria-hidden="true" data-backdrop="static">
+        <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="title">Edit</h5>
+                    <button type="button" class="btn btn-danger close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form action="javascript:void(0)" method="POST" id="update-recording">
+                        @csrf
+                        @method('PUT')
+                        {{-- alert messages --}}
+                        <div class="alert alert-danger alert-message d-none" role="alert"> </div>
+                        {{-- update form --}}
+                        <div class="row">
+                            <div class="col-md-12">
+                                <label for="video-select">Title</label>
+                                <input type="text" class="form-control" name="title" value="" required>
+                            </div>
+                            <div class="col-md-12 mt-2">
+                                <label for="audio-select">Description</label>
+                                <textarea name="description" class="form-control" id="" cols="10" rows="3"></textarea>
+                            </div>
+                        </div>
+
+                        <button type="submit" role="button" class="btn btn-primary mt-4"
+                            data-status="publish">update</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- share Modal -->
     <div class="modal fade" id="share-modal" tabindex="-1" role="dialog" aria-labelledby="share-modalTitle"
         aria-hidden="true" data-backdrop="static">
         <div class="modal-dialog modal-xl modal-dialog-centered" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="exampleModalLongTitle">Share</h5>
+                    <h5 class="modal-title" id="exampleModalLongTitle">Share with contacts or tags </h5>
                     <button type="button" class="close btn btn-danger" data-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
                 <div class="modal-body">
+                    {{-- tabs links --}}
                     <ul class="nav nav-tabs" id="myTab" role="tablist">
                         <li class="nav-item" role="presentation">
                             <a class="nav-link active" id="email-tab" data-bs-toggle="tab" href="#email"
@@ -197,33 +240,57 @@
                                 aria-controls="sms" aria-selected="false">SMS</a>
                         </li>
                     </ul>
-                    <div class="tab-content mt-4" id="shareTabContent">
+                    {{-- tabs --}}
+                    <div class="tab-content mt-4">
+                        <div class="mt-2">
+                            <div class="container">
+                                <div class="row share-select mt-3 mb-3">
+                                    <div class="col-sm-4 col-md-3 col-lg-3 col-xl-4">
+                                        <label for="contact-select">Share with contacts</label>
+                                        <input type="radio" name="share" value="contacts" checked>
+                                    </div>
+                                    <div class="col-sm-4 col-md-3 col-lg-3 col-xl-4">
+                                        <label for="tag-select">Share with tags</label>
+                                        <input type="radio" name="share" value="tags">
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6 contact_selector">
+                                        <label for="contact-select">Select contacts:</label>
+                                        <select id="contact-select" class="form-control contact-select select2">
+                                            <option value="">Select contact</option>
+                                            <option value="contacts">Contacts</option>
+                                            <option value="contacts">Contacts</option>
+                                            <option value="contacts">Contacts</option>
+                                            <option value="contacts">Contacts</option>
+                                            <option value="contacts">Contacts</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 tag_selector" style="display: none;">
+                                        <label for="tag-select">Select tags:</label>
+                                        <select id="tag-select" class="form-control tag-select">
+                                            <option value="">Select tags</option>
+                                            <option value="tags">Tags</option>
+                                            <option value="tags">Tags</option>
+                                            <option value="tags">Tags</option>
+                                            <option value="tags">Tags</option>
+                                            <option value="tags">Tags</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
                         {{-- email --}}
                         <div class="tab-pane fade show active" id="email" role="tabpanel"
                             aria-labelledby="email-tab">
                             <form action="">
-                                <div class="row">
-                                    <div class="col-md-6 contact_selector">
-                                        <label for="contact-select">Select contacts:</label>
-                                        <select id="contact-select" class="form-control contact-select">
-                                            <option value="">Select Video contact</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-md-6 tag_selector">
-                                        <label for="tag-select">Select tags:</label>
-                                        <select id="tag-select" class="form-control tag-select">
-                                            <option value="">Select audio tags</option>
-                                        </select>
-                                    </div>
-                                </div>
                                 <div class="row mt-2">
                                     <div class="col-12">
                                         <label for="video-select">Email</label>
-                                        <textarea id="summernote"></textarea>
+                                        <textarea class="form-control w-100 email-summernote" name="email" rows="3"></textarea>
                                     </div>
                                 </div>
-
                                 <div class="col-12 mt-2">
                                     <button type="submit" class="btn btn-primary">Send</button>
                                 </div>
@@ -234,33 +301,18 @@
                         <div class="tab-pane fade" id="sms" role="tabpanel" aria-labelledby="sms-tab">
                             <div class="row">
                                 <form action="">
-                                    <div class="row">
-                                        <div class="col-md-6 contact_selector">
-                                            <label for="contact-select">Select contacts:</label>
-                                            <select id="contact-select" class="form-control contact-select">
-                                                <option value="">Select Video contact</option>
-                                            </select>
-                                        </div>
-                                        <div class="col-md-6 tag_selector">
-                                            <label for="tag-select">Select tags:</label>
-                                            <select id="tag-select" class="form-control tag-select">
-                                                <option value="">Select audio tags</option>
-                                            </select>
-                                        </div>
-                                    </div>
                                     <div class="row mt-2">
                                         <div class="col-12">
                                             <label for="video-select">SMS</label>
-                                            <textarea class="form-control w-100" name="sms" id="sms" rows="3"></textarea>
+                                            <textarea class="form-control w-100 sms-summernote" name="sms" rows="3"></textarea>
                                         </div>
                                     </div>
                                     <div class="col-12 mt-2">
-                                        <button type="submit" class="btn btn-primary">Send</button>
+                                        <button type="submit" class="btn btn-primary ">Send</button>
                                     </div>
                                 </form>
                             </div>
                         </div>
-
                     </div>
                 </div>
             </div>
@@ -272,12 +324,25 @@
     <script src="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote.min.js"></script>
     <script>
         var player = null;
+
         $(document).ready(function() {
+            var height = 250;
             loadingStart();
             $('.save_video, .restart_recording').hide();
-            hideControls()
+            hideControls();
 
-            $('#summernote').summernote();
+            $('.email-summernote').summernote({
+                height: height,
+            });
+
+            $('.sms-summernote').summernote({
+                toolbar: [],
+                shortcuts: false,
+                height: height
+            });
+
+            initializeSelect2('#contact-select', '.contact_selector');
+            initializeSelect2('#tag-select', '.tag_selector');
 
             let maxLength = 100;
 
@@ -514,28 +579,30 @@
             }
 
             function saveRecording(video_recorder) {
-
                 let formData = new FormData();
                 formData.append('status', video_recorder.status);
                 formData.append('poster', video_recorder.poster);
                 formData.append('video', video_recorder.video);
                 formData.append('posterUrl', video_recorder.posterUrl);
                 formData.append('videoUrl', video_recorder.videoUrl);
-                formData.append('_token', "{{ csrf_token() }}");
 
-                $.ajax({
-                    type: "POST",
-                    url: "{{ route('recordings.store') }}",
-                    data: formData,
-                    processData: false,
-                    contentType: false,
-                    success: function(response) {
-                        console.log(response);
-                        if (response.success == true) {
+                let csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+                fetch("{{ route('recordings.store') }}", {
+                        method: "POST",
+                        body: formData,
+                        headers: {
+                            "X-CSRF-Token": csrfToken // Include CSRF token in headers
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log(data);
+                        if (data.success) {
                             Swal.fire({
                                 icon: 'success',
                                 title: 'Success',
-                                text: response.message,
+                                text: data.message,
                                 showConfirmButton: false,
                                 timer: 1000
                             });
@@ -543,17 +610,16 @@
                             Swal.fire({
                                 icon: 'error',
                                 title: 'Oops...',
-                                text: response.message,
+                                text: data.message,
                             });
                         }
                         Swal.close();
                         location.reload();
-                    },
-                    error: function(error) {
-                        console.log(error);
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
                         Swal.close();
-                    }
-                });
+                    });
             }
 
             function sendFormData(file) {
@@ -649,6 +715,7 @@
                     },
                     success: function(response) {
                         if (response.success == true) {
+                            $('.contact-select').empty();
                             let html = '<option value="">Select contact</option>';
                             response.data.contacts.forEach(element => {
                                 html +=
@@ -671,17 +738,55 @@
                     success: function(response) {
                         if (response.success == true) {
                             console.log(response.data);
-                            // let html = '<option value="">Select tags</option>';
-                            // response.data.contacts.forEach(element => {
-                            //     html +=
-                            //         `<option value="${element.id}">${element.firstName +' '+ element.lastName}</option>`;
-                            // });
-                            // $('.tags-select').html(
-                            //     html); // Uncomment this line to append options to the select element
+                            $('.tags-select').empty();;
+                            let html = '<option value="">Select tags</option>';
+                            response.data.contacts.forEach(element => {
+                                html +=
+                                    `<option value="${element.id}">${element.firstName +' '+ element.lastName}</option>`;
+                            });
+                            $('.tags-select').html(
+                                html); // Uncomment this line to append options to the select element
                         }
                     }
                 });
             }
+
+            function toogleOptions(selector, value) {
+                if (value == 'contacts') {
+                    $(selector).find('.contact_selector').show();
+                    $(selector).find('.tag_selector').hide();
+                } else {
+                    $(selector).find('.contact_selector').hide();
+                    $(selector).find('.tag_selector').show();
+                }
+            }
+
+            function initializeSelect2(select2class, formid) {
+                $(select2class).select2({
+                    dropdownParent: $(formid), // modal : id modal
+                    placeholder: "Select",
+                    allowClear: true,
+                    width: "100%",
+                    height: "40px",
+                    multiple: true,
+                    ajax({
+                        type: "method",
+                        url: "url",
+                        data: "data",
+                        dataType: "dataType",
+                        success: function(response) {
+
+                        }
+                    });
+
+                });
+            }
+
+            // Attach change event listener to radio buttons
+            $('input[name="share"]').change(function() {
+                // Call toggleOptions with the value of the checked radio button
+                toogleOptions('body', $(this).val());
+            });
 
             $('body').on('click', '[data-target="#recording-modal"]', function(e) {
                 e.preventDefault();
@@ -689,8 +794,64 @@
                 init_perm(type);
             });
 
+            $('body').on('click', '[data-target="#edit-recording-modal"]', function(e) {
+                e.preventDefault();
+                let title = $(this).data('title');
+                let description = $(this).data('description');
+
+                $('#title').html(title);
+                $('#edit-recording-modal input[name="title"]').val(title);
+                $('#edit-recording-modal textarea[name="description"]').val(description);
+                $('#edit-recording-modal form').attr('action', $(this).data('url'));
+            });
+
+            $('body').on('submit', '#update-recording', function(e) {
+                e.preventDefault();
+                // alert('update');
+                loadingStart('Updating...');
+                let formData = new FormData();
+                formData.append('title', $('#edit-recording-modal input[name="title"]').val());
+                formData.append('description', $('#edit-recording-modal textarea[name="description"]')
+                    .val());
+                formData.append('_token', "{{ csrf_token() }}");
+                formData.append('_method', 'PATCH');
+                $.ajax({
+                    type: "POST",
+                    url: $(this).attr('action'),
+                    data: formData,
+                    // dataType: "dataType",
+                    processData: false,
+                    contentType: false,
+                    success: function(response) {
+                        loadingStop();
+                        if (response.success == true) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Success',
+                                text: response.message,
+                                showConfirmButton: false,
+                                timer: 1000
+                            });
+                            location.reload();
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Oops...',
+                                text: response.message,
+                            });
+                        }
+                    },
+                    error: function(error) {
+                        loadingStop();
+                        let errorMessage = error.responseJSON.message;
+                        $('.alert-message').html(errorMessage).show();
+                    }
+                });
+            });
+
             $('body').on('click', '[data-target="#share-modal"]', function(e) {
                 e.preventDefault();
+                toogleOptions('body', $('input[name="share"]:checked').val());
                 getContacts();
                 getTags();
             });
@@ -698,7 +859,6 @@
             $('.share').click(function(e) {
                 e.preventDefault();
                 let id = $(this).data('value');
-                console.log(id);
                 $('.share_id').val(id);
             });
 

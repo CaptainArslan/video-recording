@@ -24,6 +24,7 @@
     <!-- videojs-record CSS -->
     <link href="https://unpkg.com/videojs-record/dist/css/videojs.record.min.css" rel="stylesheet">
 
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     @yield('css')
 
 </head>
@@ -69,14 +70,18 @@
     <script src="{{ asset('/assets/js/sidebarmenu.js') }}"></script>
     <script src="{{ asset('/assets/js/app.min.js') }}"></script>
     <script src="{{ asset('js/my-custom.js') }}"></script>
+    <script src="{{ asset('js/video-js.js') }}"></script>
+
+    {{-- select 2 --}}
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-Fy6S3B9q64WdZWQUiU+q4/2Lc9npb8tCaSX9FK7E8HnRr0Jz8D6OP9dO5Vg3Q9ct" crossorigin="anonymous">
     </script>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"
         integrity="sha512-VEd+nq25CkR676O+pLBnDW09R7VQX9Mdiij052gVCp5yVH3jGtH70Ho/UUv4mJDsEdTvqRCFZg0NKGiojGnUCw=="
         crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-
 
     <!-- Video.js and RecordRTC -->
     <script src="https://unpkg.com/video.js@7.20.1/dist/video.min.js"></script>
@@ -84,9 +89,6 @@
     <script src="https://unpkg.com/webrtc-adapter/out/adapter.js"></script>
     <!-- videojs-record -->
     <script src="https://unpkg.com/videojs-record/dist/videojs.record.min.js"></script>
-
-    <script src="{{ asset('js/video-js.js') }}"></script>
-
     @yield('js')
 </body>
 

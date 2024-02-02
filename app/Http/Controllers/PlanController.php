@@ -66,7 +66,7 @@ class PlanController extends Controller
                 ->toJson();
         }
 
-        return view(self::VIEW.'.index', get_defined_vars());
+        return view(self::VIEW . '.index', get_defined_vars());
     }
 
     /**
@@ -76,10 +76,11 @@ class PlanController extends Controller
      */
     public function create()
     {
-        $this->skip = array_merge($this->skip, []);
+        $this->skip = array_merge($this->skip, ['description']);
         $formFields = getFormFields(self::TABLE, $this->skip);
+        // dd($formFields);
 
-        return view(self::VIEW.'.store', get_defined_vars());
+        return view(self::VIEW . '.store', get_defined_vars());
     }
 
     /**
@@ -90,16 +91,25 @@ class PlanController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'name' => 'required|string',
+            'title' => 'required|string',
             'price' => 'required|gt:0',
-            'recording_limit' => 'required|gt:0',
-            'description' => 'required|string|max:255',
+            'limit' => 'required|gt:0',
+            'recording_minutes_limit' => 'required|gt:0',
+            // 'description' => 'required|string|max:255',
             'status' => 'required|in:0,1',
         ]);
+        // dd($request->only('title', 'price', 'recording_minutes_limit', 'limit', 'description', 'status'));
         // User::create($request->all());
-        Plan::create($request->only('name', 'price', 'recording_limit', 'description', 'status'));
+        Plan::create([
+            'title' => $request->title,
+            'price' => $request->price,
+            'recording_minutes_limit' => $request->recording_minutes_limit,
+            'limit' => $request->limit,
+            'description' => $request->description,
+            'status' => $request->status,
+        ]);
 
-        return redirect()->route(self::ROUTE.'.index')->with('success', self::VIEW.' created successfully');
+        return redirect()->route(self::ROUTE . '.index')->with('success', self::VIEW . ' created successfully');
     }
 
     /**
@@ -125,7 +135,7 @@ class PlanController extends Controller
         $this->skip = array_merge($this->skip, []);
         $formFields = getFormFields(self::TABLE, $this->skip, $plan);
 
-        return view(self::VIEW.'.edit', get_defined_vars());
+        return view(self::VIEW . '.edit', get_defined_vars());
     }
 
     /**
@@ -150,6 +160,6 @@ class PlanController extends Controller
         // $user = User::findOrFail($id);
         $plan->delete();
 
-        return redirect()->route(self::ROUTE.'.index')->with('success', self::VIEW.' deleted successfully');
+        return redirect()->route(self::ROUTE . '.index')->with('success', self::VIEW . ' deleted successfully');
     }
 }

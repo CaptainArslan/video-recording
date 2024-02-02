@@ -20,6 +20,7 @@ class RecordingFactory extends Factory
             'description' => $this->faker->text(50),
             'file' => $this->faker->url(),
             'file_url' => $this->faker->url(),
+            'short_url' => $this->faker->url(),
             'poster' => $this->faker->url(),
             'poster_url' => $this->faker->url(),
             'duration' => $this->faker->numberBetween(1, 10),

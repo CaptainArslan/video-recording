@@ -14,6 +14,7 @@
         "laravel/framework": "^8.75",
         "laravel/sanctum": "^2.11",
         "laravel/tinker": "^2.5",
+        "opcodesio/log-viewer": "^3.1",
         "tymon/jwt-auth": "*",
         "yajra/laravel-datatables-oracle": "^9.21"
     },

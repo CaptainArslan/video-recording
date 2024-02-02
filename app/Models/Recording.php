@@ -12,18 +12,7 @@ class Recording extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'user_id',
-        'title',
-        'description',
-        'file',
-        'thumbnail',
-        'duration',
-        'size',
-        'type',
-        'status',
-        'privacy',
-        'share',
-        'embed',
+        'user_id', 'title', 'description', 'file', 'file_url', 'poster', 'poster_url', 'duration', 'status', 'size', 'type', 'privacy', 'share', 'embed',
     ];
 
     public function user()

@@ -1,25 +1,25 @@
 <?php
 
-use App\Models\GhlAuth;
-use App\Models\Setting;
+use Carbon\Carbon;
 use App\Models\User;
 use GuzzleHttp\Client;
-use GuzzleHttp\Exception\ConnectException;
-use GuzzleHttp\Exception\RequestException;
+use App\Models\GhlAuth;
+use App\Models\Setting;
+use Faker\Factory as Faker;
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\RequestOptions;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Faker\Factory as Faker;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
+use GuzzleHttp\Exception\ConnectException;
+use GuzzleHttp\Exception\RequestException;
 
 function generateRandomQuote()
 {
     $faker = Faker::create();
     return $faker->text;
 }
-
 
 function getPaginate($limit = null)
 {
@@ -233,15 +233,25 @@ function getFieldType($type)
         return 'password';
     } elseif (strpos($type, 'image') !== false) {
         return 'file';
-    } elseif (strpos($type, 'new_puppy_name') !== false || strpos($type, 'puppy_breed') !== false || strpos($type, 'puppy_dob') !== false || strpos($type, 'microchip_number') !== false || strpos($type, 'pickup_date') !== false) {
+    } elseif (strpos($type, 'status') !== false) {
         return 'select';
     }
 }
 
-function getoptions($type, $key, $id, $forcf)
+// function getoptions($type, $key, $id, $forcf)
+// {
+//     if ($forcf) {
+//         return get_ghl_customFields();
+//     } else {
+//         return [];
+//     }
+// }
+function getoptions($type, $key, $id, $class)
 {
-    if ($forcf) {
-        return get_ghl_customFields();
+    $type = strtolower($type);
+    if (strpos($type, 'select') !== false && $key == 'status') {
+        // return User::pluck('first_name', 'id')->toArray();
+        return ['1' => 'Active', '0' => 'Inactive'];
     } else {
         return [];
     }
@@ -590,6 +600,7 @@ function convertLocationId($key)
 
     return lcfirst($convertedKey);
 }
+
 function ConnectOauth($loc, $token, $method = '')
 {
     $tokenx = false;
@@ -613,4 +624,16 @@ function ConnectOauth($loc, $token, $method = '')
     }
 
     return $tokenx;
+}
+
+function formatTimestamp($timestamp, $format)
+{
+    // Check if the input is a valid timestamp
+    if (strtotime($timestamp) !== false) {
+        // Convert timestamp to the desired format
+        return date($format, strtotime($timestamp));
+    } else {
+        // If input is not a valid timestamp, return it unchanged
+        return $timestamp;
+    }
 }

@@ -60,7 +60,7 @@ class SettingController extends Controller
             ],
         ];
 
-        return view(self::VIEW.'.index', get_defined_vars());
+        return view(self::VIEW . '.index', get_defined_vars());
     }
 
     /**
@@ -72,7 +72,10 @@ class SettingController extends Controller
     {
         foreach ($request->except('_token') as $key => $value) {
             if ($request->hasFile($key)) {
-                $value = uploadFile($request->file($key), 'uploads/logos', $key.'_'.time());
+                $value = uploadFile($request->file($key), 'uploads/logos', $key . '_' . time());
+            }
+            if (setting('company_logo')) {
+                deleteFile(asset('/' . setting('company_logo')));
             }
             save_settings($key, $value);
         }
