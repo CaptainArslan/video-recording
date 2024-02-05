@@ -92,14 +92,17 @@ class PlanController extends Controller
     {
         $request->validate([
             'title' => 'required|string',
-            'price' => 'required|gt:0',
-            'limit' => 'required|gt:0',
+            'price' => 'required|gte:0',
+            'limit' => 'required|gte:0',
             'recording_minutes_limit' => 'required|gt:0',
             // 'description' => 'required|string|max:255',
-            'status' => 'required|in:0,1',
+            'status' => 'required|in:0,1,2',
         ]);
         // dd($request->only('title', 'price', 'recording_minutes_limit', 'limit', 'description', 'status'));
         // User::create($request->all());
+        if ($request->status == 2) {
+            Plan::where('status', 2)->update(['status' => 1]);
+        }
         Plan::create([
             'title' => $request->title,
             'price' => $request->price,
@@ -146,7 +149,28 @@ class PlanController extends Controller
      */
     public function update(Request $request, $id)
     {
-        //
+        $request->validate([
+            'title' => 'required|string',
+            'price' => 'required|gte:0',
+            'limit' => 'required|gte:0',
+            'recording_minutes_limit' => 'required|gt:0',
+            // 'description' => 'required|string|max:255',
+            'status' => 'required|in:0,1,2',
+        ]);
+        // dd($request->only('title', 'price', 'recording_minutes_limit', 'limit', 'description', 'status'));
+        // User::create($request->all());
+        if ($request->status == 2) {
+            Plan::where('status', 2)->update(['status' => 1]);
+        }
+        Plan::where('id', $id)->update([
+            'title' => $request->title,
+            'price' => $request->price,
+            'recording_minutes_limit' => $request->recording_minutes_limit,
+            'limit' => $request->limit,
+            'description' => $request->description,
+            'status' => $request->status,
+        ]);
+        return redirect()->back()->with('success', self::VIEW . ' updated successfully');
     }
 
     /**
@@ -157,6 +181,13 @@ class PlanController extends Controller
      */
     public function destroy(Plan $plan)
     {
+
+        if ($plan->users->count() > 0) {
+            return redirect()->route(self::ROUTE . '.index')->with('error', 'Plan has users, cannot delete');
+        }
+        if ($plan->id == 1) {
+            return redirect()->route(self::ROUTE . '.index')->with('error', 'Cannot delete default plan');
+        }
         // $user = User::findOrFail($id);
         $plan->delete();
 

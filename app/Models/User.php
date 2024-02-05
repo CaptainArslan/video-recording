@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -54,6 +55,7 @@ class User extends Authenticatable implements JWTSubject
         'email_verified_at',
         'password',
         'added_by',
+        'plan_id',
         'image',
         'status',
     ];
@@ -77,9 +79,9 @@ class User extends Authenticatable implements JWTSubject
         'email_verified_at' => 'datetime',
     ];
 
-    public function plans(): BelongsToMany
+    public function plan(): BelongsTo
     {
-        return $this->belongsToMany(Plan::class)->withPivot('start_date', 'end_date', 'status')->withTimestamps();
+        return $this->belongsTo(Plan::class);
     }
 
     public function recordings(): HasMany

@@ -1,26 +1,61 @@
 @extends('layouts.app')
 @section('title', 'Settings')
 @section('css')
-    <link href="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.css" rel="stylesheet">
+    <style>
+        [aria-label="Video"],
+        [aria-label="Help"] {
+            display: none !important;
+        }
+
+        .iframe #main-wrapper[data-layout=vertical][data-sidebartype=full] .body-wrapper {
+            margin-left: 0px !important;
+        }
+
+        .iframe .body-wrapper>.container-fluid {
+            max-width: 100% !important;
+        }
+
+        .iframe #main-wrapper[data-layout=vertical][data-header-position=fixed] .body-wrapper>.container-fluid {
+            padding-top: 0px !important;
+        }
+    </style>
 @endsection
 @section('section')
     <div class="card shadow-none">
         <div class="card-body d-flex align-items-center justify-content-between">
-            <h3 class="card-title fw-semibold">{{ $title }} ({{ $user->recordings->count() }} / 25)</h3>
+
+            @php
+                $limit = $user->plan->limit ?? 0;
+                $recordMore = true;
+                $recCount = $user->recordings->count();
+                if ($limit == 0) {
+                    $limit = 'Unlimited';
+                } elseif ($recCount >= $limit) {
+                    $recordMore = false;
+                }
+
+            @endphp
+            <h3 class="card-title fw-semibold">{{ $title }} ({{ $recCount }} / {{ $limit }})
+            </h3>
             <!-- <a href="javascript:void(0)" class="btn btn-primary"> New Video </a> -->
             <div class="dropdown">
-                <button class="btn btn-primary dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown"
-                    aria-haspopup="true" aria-expanded="false">
-                    New Video
-                </button>
-                <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-                    <button class="dropdown-item text-dark" href="javascrip:void(0)" type="button" class="btn btn-primary"
-                        data-value="video" data-toggle="modal" data-target="#recording-modal"> <i class="fa fa-video-camera"
-                            aria-hidden="true"></i> &nbsp;&nbsp; Record a Video</button>
-                    <button class="dropdown-item text-dark" href="javascrip:void(0)" type="button" class="btn btn-primary"
-                        data-value="screen" data-toggle="modal" data-target="#recording-modal"> <i
-                            class="fa fa-video-camera" aria-hidden="true"></i> &nbsp;&nbsp; Record a Screen</button>
-                </div>
+
+                @if ($recordMore)
+                    <button class="btn btn-primary dropdown-toggle" type="button" id="dropdownMenuButton"
+                        data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        New Video
+                    </button>
+                    <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                        <button class="dropdown-item text-dark" href="javascrip:void(0)" type="button"
+                            class="btn btn-primary" data-value="video" data-toggle="modal" data-target="#recording-modal">
+                            <i class="fa fa-video-camera" aria-hidden="true"></i> &nbsp;&nbsp; Record a Video</button>
+                        <button class="dropdown-item text-dark" href="javascrip:void(0)" type="button"
+                            class="btn btn-primary" data-value="screen" data-toggle="modal" data-target="#recording-modal">
+                            <i class="fa fa-video-camera" aria-hidden="true"></i> &nbsp;&nbsp; Record a Screen</button>
+                    </div>
+                @endif
+
             </div>
         </div>
     </div>
@@ -53,7 +88,8 @@
                                         <video playsinline class="card-img-top"
                                             poster="{{ $recording->poster_url ?? 'https://via.placeholder.com/600x400' }}"
                                             src="{{ $recording->video_url ?? 'https://via.placeholder.com/600x400' }}"
-                                            type="video/mp4">
+                                            type="video/mp4"
+                                            style="max-height: 400px; display: flex; object-fit: contain; ">
                                             <!-- Fallback image in case the video fails to load -->
                                             <img src="{{ $recording->poster_url ?? 'https://via.placeholder.com/600x400' }}"
                                                 alt="{{ $recording->title }}">
@@ -80,9 +116,9 @@
                                         <p class="card-text">{{ $recording->description }}.</p>
                                         <div class="">
                                             <button class="btn btn-danger share" data-bs-toggle="tooltip"
-                                                data-value="{{ $recording->id }}" title="Share">
-                                                <i class="fa fa-user-plus" data-toggle="modal"
-                                                    data-target="#share-modal"></i>
+                                                data-value="{{ $recording->id }}" data-toggle="modal"
+                                                data-target="#share-modal" data-title="{{ $recording->title }}">
+                                                <i class="fa fa-user-plus"></i>
                                             </button>
                                             {{-- <button class="btn btn-info copy-iframe" data-bs-toggle="tooltip"
                                                 data-link="{{ $recording->file_url }}" title="Copy iframe ">
@@ -124,7 +160,7 @@
         <div class="modal-dialog modal-xl modal-dialog-centered" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="exampleModalLongTitle">Recorder</h5>
+                    <h5 class="modal-title" id="new-recording">Recorder</h5>
                     <button type="button" class="btn btn-danger close" data-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
@@ -223,7 +259,7 @@
         <div class="modal-dialog modal-xl modal-dialog-centered" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="exampleModalLongTitle">Share with contacts or tags </h5>
+                    <h5 class="modal-title">Share ( <span id="share-recording-heading"></span> ) </h5>
                     <button type="button" class="close btn btn-danger" data-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
@@ -240,41 +276,40 @@
                                 aria-controls="sms" aria-selected="false">SMS</a>
                         </li>
                     </ul>
+
+                    <input type="hidden" id="recording_id" value=''>
                     {{-- tabs --}}
                     <div class="tab-content mt-4">
                         <div class="mt-2">
                             <div class="container">
                                 <div class="row share-select mt-3 mb-3">
                                     <div class="col-sm-4 col-md-3 col-lg-3 col-xl-4">
-                                        <label for="contact-select">Share with contacts</label>
-                                        <input type="radio" name="share" value="contacts" checked>
+                                        <label for="contact-label" role="button">Share with contacts</label>
+                                        <input type="radio" id="contact-label" name="share" value="contacts"
+                                            checked>
                                     </div>
                                     <div class="col-sm-4 col-md-3 col-lg-3 col-xl-4">
-                                        <label for="tag-select">Share with tags</label>
-                                        <input type="radio" name="share" value="tags">
+                                        <label for="tag-label" role="button">Share with contacts having tags</label>
+                                        <input type="radio" id="tag-label" name="share" value="tags">
                                     </div>
+                                </div>
+                                <div hidden>
+                                    <input type="radio" name="process1" value="direct">
+                                    <input type="radio" name="process1" value="chunks" checked>
                                 </div>
                                 <div class="row">
                                     <div class="col-md-6 contact_selector">
                                         <label for="contact-select">Select contacts:</label>
-                                        <select id="contact-select" class="form-control contact-select select2">
-                                            <option value="">Select contact</option>
-                                            <option value="contacts">Contacts</option>
-                                            <option value="contacts">Contacts</option>
-                                            <option value="contacts">Contacts</option>
-                                            <option value="contacts">Contacts</option>
-                                            <option value="contacts">Contacts</option>
+                                        <select id="contact-select" placeholder="Choose Multiple Contacts"
+                                            class="form-control contact-select" multiple="true">
                                         </select>
                                     </div>
                                     <div class="col-md-6 tag_selector" style="display: none;">
                                         <label for="tag-select">Select tags:</label>
-                                        <select id="tag-select" class="form-control tag-select">
-                                            <option value="">Select tags</option>
-                                            <option value="tags">Tags</option>
-                                            <option value="tags">Tags</option>
-                                            <option value="tags">Tags</option>
-                                            <option value="tags">Tags</option>
-                                            <option value="tags">Tags</option>
+                                        <select id="tag-select" placeholder="Choose Multiple Tags"
+                                            class="form-control tag-select" multiple="true">
+
+
                                         </select>
                                     </div>
                                 </div>
@@ -284,35 +319,36 @@
                         {{-- email --}}
                         <div class="tab-pane fade show active" id="email" role="tabpanel"
                             aria-labelledby="email-tab">
-                            <form action="">
-                                <div class="row mt-2">
-                                    <div class="col-12">
-                                        <label for="video-select">Email</label>
-                                        <textarea class="form-control w-100 email-summernote" name="email" rows="3"></textarea>
-                                    </div>
+                            <div class="row mt-2">
+                                <div class="col-12">
+                                    <label for="subject">Subject</label>
+                                    <input type="text" class="form-control" name="video-subject" id="subject"
+                                        placeholder="Default Subject Recording">
+
                                 </div>
-                                <div class="col-12 mt-2">
-                                    <button type="submit" class="btn btn-primary">Send</button>
+                                <div class="col-12">
+                                    <label for="video-select">Email</label>
+                                    <textarea class="form-control w-100 email-summernote" name="email" rows="3"></textarea>
                                 </div>
-                            </form>
+                            </div>
                         </div>
 
                         {{-- sms tab --}}
                         <div class="tab-pane fade" id="sms" role="tabpanel" aria-labelledby="sms-tab">
                             <div class="row">
-                                <form action="">
-                                    <div class="row mt-2">
-                                        <div class="col-12">
-                                            <label for="video-select">SMS</label>
-                                            <textarea class="form-control w-100 sms-summernote" name="sms" rows="3"></textarea>
-                                        </div>
+                                <div class="row mt-2">
+                                    <div class="col-12">
+                                        <label for="video-select">SMS</label>
+                                        <textarea class="form-control w-100 sms-summernote" name="sms" rows="3"></textarea>
                                     </div>
-                                    <div class="col-12 mt-2">
-                                        <button type="submit" class="btn btn-primary ">Send</button>
-                                    </div>
-                                </form>
+                                </div>
                             </div>
                         </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <div class="col-12 mt-2">
+                        <a type="submit" id="submitData" data-action="direct" class="btn btn-primary ">Send</a>
                     </div>
                 </div>
             </div>
@@ -321,11 +357,24 @@
 
 @endsection
 @section('js')
-    <script src="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.js"></script>
     <script>
         var player = null;
 
+        if (window.self == window.parent) {
+            document.querySelector('body').classList.remove('iframe');
+        }
+        let ssworker = null;
+
+
         $(document).ready(function() {
+
+            $.ajaxSetup({
+                headers: {
+                    'token-id': localStorage.getItem('token-id'),
+                }
+            });
+
             var height = 250;
             loadingStart();
             $('.save_video, .restart_recording').hide();
@@ -341,8 +390,8 @@
                 height: height
             });
 
-            initializeSelect2('#contact-select', '.contact_selector');
-            initializeSelect2('#tag-select', '.tag_selector');
+            // initializeSelect2('#contact-select', '.contact_selector');
+            // initializeSelect2('#tag-select', '.tag_selector');
 
             let maxLength = 100;
 
@@ -597,7 +646,7 @@
                     })
                     .then(response => response.json())
                     .then(data => {
-                        console.log(data);
+
                         if (data.success) {
                             Swal.fire({
                                 icon: 'success',
@@ -653,7 +702,7 @@
                         pageVisitType: "form",
                         domain: host,
                         version: "v3",
-                        parentName: "Work ScreenShots - Do not delete form",
+                        parentName: "Videos - Do not delete form",
                         fingerprint: null,
                         gaClientId: "GA1.2.1779790463.1673615426",
                         fbEventId: "b515d2f4-cb1c-4ac6-b0d0-4095e2f18a95",
@@ -706,27 +755,6 @@
                 });
             }
 
-            function getContacts() {
-                $.ajax({
-                    type: "GET",
-                    url: "{{ route('ghl.contacts') }}",
-                    data: {
-                        '_token': "{{ csrf_token() }}"
-                    },
-                    success: function(response) {
-                        if (response.success == true) {
-                            $('.contact-select').empty();
-                            let html = '<option value="">Select contact</option>';
-                            response.data.contacts.forEach(element => {
-                                html +=
-                                    `<option value="${element.id}">${element.firstName +' '+ element.lastName }</option>`;
-                            });
-                            $('.contact-select').html(
-                                html); // Uncomment this line to append options to the select element
-                        }
-                    }
-                });
-            }
 
             function getTags() {
                 $.ajax({
@@ -737,16 +765,20 @@
                     },
                     success: function(response) {
                         if (response.success == true) {
-                            console.log(response.data);
-                            $('.tags-select').empty();;
-                            let html = '<option value="">Select tags</option>';
-                            response.data.contacts.forEach(element => {
-                                html +=
-                                    `<option value="${element.id}">${element.firstName +' '+ element.lastName}</option>`;
-                            });
-                            $('.tags-select').html(
-                                html); // Uncomment this line to append options to the select element
+                            // console.log(response.data);
+                            $('.tag-select').empty();
+                            let html = '';;
+                            $('.tag-select').html(
+                                response?.data.map(element => {
+                                    if (element.name.trim() == '') {
+                                        return '';
+                                    }
+                                    return `<option value="${element.name}">${element.name}</option>`;
+                                }).join(''));
+
+                            $('#tag-select').trigger('change');
                         }
+                        initializeSelect2('#tag-select', '.tag_selector');
                     }
                 });
             }
@@ -762,25 +794,18 @@
             }
 
             function initializeSelect2(select2class, formid) {
+                let dt = $(select2class);
                 $(select2class).select2({
                     dropdownParent: $(formid), // modal : id modal
-                    placeholder: "Select",
+                    placeholder: dt.attr('placeholder') ?? 'Choose an option',
                     allowClear: true,
+                    closeOnSelect: false,
                     width: "100%",
                     height: "40px",
                     multiple: true,
-                    ajax({
-                        type: "method",
-                        url: "url",
-                        data: "data",
-                        dataType: "dataType",
-                        success: function(response) {
-
-                        }
-                    });
-
                 });
             }
+
 
             // Attach change event listener to radio buttons
             $('input[name="share"]').change(function() {
@@ -851,16 +876,19 @@
 
             $('body').on('click', '[data-target="#share-modal"]', function(e) {
                 e.preventDefault();
+                $('#recording_id').val($(this).data('value'));
                 toogleOptions('body', $('input[name="share"]:checked').val());
-                getContacts();
+                $('#share-recording-heading').html($(this).data('title'));
+                $('#subject').val($(this).data('title'));
+                //getContacts();
                 getTags();
             });
 
-            $('.share').click(function(e) {
-                e.preventDefault();
-                let id = $(this).data('value');
-                $('.share_id').val(id);
-            });
+            // $('.share').click(function(e) {
+            //     e.preventDefault();
+            //     let id = $(this).data('value');
+            //     $('.share_id').val(id);
+            // });
 
             $('#video-select').change(function(e) {
                 e.preventDefault();
@@ -901,6 +929,94 @@
                 $('.start_recording').show();
                 player.record().stop();
             });
+
+            function chunkArray(arr, chunkSize) {
+                const chunkedArrays = [];
+                for (let i = 0; i < arr.length; i += chunkSize) {
+                    chunkedArrays.push(arr.slice(i, i + chunkSize));
+                }
+                return chunkedArrays;
+            }
+
+
+            function processChunks(chunks, data) {
+                return new Promise((resolve, reject) => {
+                    let processNextChunk = (index) => {
+                        if (index >= chunks.length) {
+
+                            resolve(chunks);
+                            return;
+                        }
+
+                        let chunk = chunks[index];
+                        let promises = chunk.map((element, ind) => {
+                            data.formData.set('contacts', element);
+                            return data.callback(data.formData, ind).then(x => {
+                                chunks[index][ind].response = x;
+                            }).catch(error => {
+                                // let errorMessage = error.responseJSON.message;
+                                //   $('.alert-message').html(errorMessage).show();
+                            });
+                        });
+
+                        Promise.all(promises).then(() => {
+                            setTimeout(() => {
+                                processNextChunk(index + 1);
+                            }, 2000);
+                        });
+                    };
+
+                    processNextChunk(data.start ?? 0);
+                });
+            }
+
+
+            function processChunks1(chunks, data) {
+                let start = data.start;
+                console.log(chunks.length, start);
+                if (start >= chunks.length) {
+
+                    if (typeof data.finalize == 'function') {
+                        //data.finalize(chunks);
+                    }
+                    console.log('done', chunks);
+                    loadingStop();
+                    return chunks;
+                }
+                let chunk = chunks[start] ?? [];
+                chunk.forEach((element, ind) => {
+                    console.log(element);
+                    data.formData.set('contacts', element);
+                    console.log(data.formData);
+                    try {
+                        $.ajax({
+                            type: "POST",
+                            url: "{{ route('ghl.sendData') }}",
+                            data: data.formData,
+                            // dataType: "dataType",
+                            processData: false,
+                            contentType: false,
+                            success: function(response) {
+                                console.log(response);
+                                chunks[start][ind].response = response;
+                                // resolve(response);
+                            },
+                            error: function(error) {
+
+                                //reject(error);
+                            }
+                        });
+                    } catch (error) {
+                        console.log(error);
+                    }
+
+                    if (ind == chunk.length - 1) {
+                        data.start = data.start + 1;
+                        processChunks1(chunks, data);
+                    }
+                });
+            }
+
 
             $('.restart_recording').click(function(e) {
                 e.preventDefault();
@@ -955,7 +1071,222 @@
                 loadingStop();
             });
 
+
+            function processData(formData) {
+
+                return new Promise((resolve, reject) => {
+
+                    //$('#contact-select').val()
+
+                    $.ajax({
+                        type: "POST",
+                        url: "{{ route('ghl.sendData') }}",
+                        data: formData,
+                        // dataType: "dataType",
+                        processData: false,
+                        contentType: false,
+                        success: function(response) {
+
+                            resolve(response);
+                        },
+                        error: function(error) {
+
+                            reject(error);
+                        }
+                    });
+                });
+
+            }
+
+
+
+
+            $('#submitData').click(async function(e) {
+                e.preventDefault();
+                loadingStart('Processing...');
+                // $(this).attr('disabled', 'disabled');
+
+                try {
+                    let tabactive = $('#sms-tab').hasClass('active') ? 'SMS' : 'Email';
+                    let body = '';
+                    if (tabactive == 'Email') {
+                        body = $('.email-summernote').summernote('code');
+                    } else {
+                        body = $($(".sms-summernote").summernote('code')).text();
+
+                    }
+                    if (body == '' || body == '<p></p>' || body == '<p><br></p>') {
+                        loadingStop();
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Oops...',
+                            text: 'Please enter content to send',
+                        });
+                        return;
+                    }
+
+
+                    let defChunks = 'chunks';
+                    let action = $('[name="process1"]:checked').val();
+                    // $(this).data('action') ?? 'direct';
+                    console.log(action);
+                    let contacts = $('#contact-select').val();
+                    let contactChunks = [];
+                    let formData = new FormData();
+                    if (action == defChunks) {
+                        contactChunks = chunkArray(contacts, 50);
+                    } else {
+                        formData.append('contacts', contacts);
+                    }
+                    let tags = $('#tag-select').val();
+                    formData.append('tags', tags);
+
+                    let share = $('[name="share"]:checked').val();
+                    formData.append('body', body);
+                    formData.append('subject', $('#subject').val());
+                    formData.append('share', share);
+                    formData.append('type', tabactive);
+                    formData.append('recording_id', $('#recording_id').val());
+                    formData.append('_token', "{{ csrf_token() }}");
+
+                    const formDataObject = {};
+                    formData.forEach((value, key) => {
+                        formDataObject[key] = value;
+                    });
+                    console.log(contactChunks);
+                    console.time();
+                    if (action == defChunks) {
+
+                        let worker = new Worker('./js/chunksWorker.js');
+
+                        worker.postMessage({
+                            chunks: contactChunks,
+                            data: {
+                                start: 0,
+                                end: contactChunks.length,
+                                // callback: processData,
+                                formDataObject: formDataObject,
+                                url: "{{ route('ghl.sendData') }}",
+                                contacts: "{{ route('ghl.contacts') }}"
+                            }
+                        });
+
+
+
+
+                        worker.onmessage = function(e) {
+                            let data = e.data;
+
+                            if (data.status == 'progress') {
+
+                                data.contact = (data.start * 50) + (data.index + 1);
+                                let message = `Processing... Contact ${data.contact}`;
+                                if (data.tag != '') {
+
+
+
+                                    message += `- Tag ${data.tag}`;
+                                }
+                                loadingStart(
+                                    message
+                                );
+                            } else {
+                                console.timeEnd();
+                                loadingStop();
+                            }
+
+
+                        };
+                        // processChunks1(contactChunks, {
+                        //     start: 0,
+                        //     end: contactChunks.length,
+                        //     callback: processData,
+                        //     formData: formData
+
+                        // }); //
+
+                        /*.then(x => {
+                            console.timeEnd()
+                            loadingStop();
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Success',
+                                text: 'Data sent successfully',
+                                showConfirmButton: false,
+                                timer: 1000
+                            });
+                        }).catch(t => {
+
+                        });*/
+                    } else {
+
+
+                        processData(formData).then(x => {
+                            console.timeEnd();
+                            loadingStop();
+                            console.log(x);
+                        }).catch(t => {
+                            console.log(t);
+                            loadingStop();
+                        });
+                    }
+
+                } catch (error) {
+                    console.log(error);
+                    loadingStop();
+                }
+
+
+
+
+            });
+
+
+            /*
+
+            finalize: function(chunks) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Success',
+                            text: 'Data sent successfully',
+                            showConfirmButton: false,
+                            timer: 1000
+                        });
+
+                    }
+            */
             loadingStop();
+
+            $("#contact-select").select2({
+                ajax: {
+                    url: "{{ route('ghl.contacts') }}",
+                    dataType: 'json',
+                    delay: 250,
+                    data: function(params) {
+                        return {
+                            q: params.term, // search term
+                            page: params.page
+                        };
+                    },
+                    processResults: function(data, params) {
+                        // console.log(data);
+                        // parse the results into the format expected by Select2
+                        // since we are using custom formatting functions we do not need to
+                        // alter the remote JSON data, except to indicate that infinite
+                        // scrolling can be used
+                        params.page = params.page || 1;
+
+                        return data;
+                    },
+                    cache: true
+                },
+                placeholder: $("#contact-select").attr('placeholder'),
+                allowClear: true,
+                dropdownParent: $('#share-modal'),
+                closeOnSelect: false,
+                width: "100%",
+
+            });
 
         });
     </script>

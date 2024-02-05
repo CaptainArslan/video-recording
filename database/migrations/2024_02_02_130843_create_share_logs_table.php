@@ -15,10 +15,19 @@ class CreateShareLogsTable extends Migration
     {
         Schema::create('share_logs', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
             $table->foreignId('recording_id')->constrained('recordings')->onDelete('cascade');
-            $table->string('link');
-            $table->string('method');
+            $table->string('contact_id');
+            $table->string('contact_name')->nullable();
+            $table->string('type');
+            $table->string('subject')->nullable();
+            $table->text('body');
+            $table->json('all_tags')->nullable();
+            $table->string('status');
+            $table->string('conversation_id')->nullable();
+            $table->text('message')->unullable();
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

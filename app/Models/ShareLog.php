@@ -8,4 +8,6 @@ use Illuminate\Database\Eloquent\Model;
 class ShareLog extends Model
 {
     use HasFactory;
+
+    protected $guard = [];
 }

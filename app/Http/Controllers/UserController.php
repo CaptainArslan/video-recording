@@ -2,11 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Plan;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Yajra\DataTables\DataTables;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Yajra\DataTables\DataTables;
 
 class UserController extends Controller
 {
@@ -50,7 +51,7 @@ class UserController extends Controller
 
     public function index(Request $request)
     {
-        $this->skip = array_merge($this->skip, ['password', 'image']);
+        $this->skip = array_merge($this->skip, ['password', 'image', 'role', 'email']);
         $tableFields = getTableColumns(self::TABLE, $this->skip);
         $tableFields = array_merge($tableFields, ['action' => 'Action']);
         if ($request->ajax()) {
@@ -66,9 +67,7 @@ class UserController extends Controller
 
                     return $actionhtml;
                 })
-                ->editColumn('role', function ($row) {
-                    return $row->getRole();
-                })
+
                 ->editColumn('status', function ($row) {
                     return $row->getStatus();
                 })
@@ -89,70 +88,35 @@ class UserController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
-            'first_name' => 'required|string',
-            'last_name' => 'required|string',
-            'ghl_api_key' => 'required|string',
-            'email' => 'required|email|unique:users',
-            'password' => 'required|min:6',
-        ]);
-        // User::create($request->all());
-        User::create([
-            'first_name' => $request->first_name,
-            'last_name' => $request->last_name,
-            'ghl_api_key' => $request->ghl_api_key,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'role' => is_role() == 'company' ? 2 : 1,
-        ]);
-
         return redirect()->route(self::ROUTE . '.index')->with('success', 'User created successfully');
     }
 
     public function show($id)
     {
-        $user = User::findOrFail($id);
-
-        return view(self::VIEW . '.show', compact('user'));
     }
 
     public function edit(User $user)
     {
-        // $user = User::findOrFail($id);
-        $this->skip = array_merge($this->skip, ['status', 'role', 'name', 'image', 'password']);
-        $formFields = getFormFields(self::TABLE, $this->skip, $user);
-
+        $plans = Plan::get();
         return view(self::VIEW . '.edit', get_defined_vars());
     }
 
     public function update(Request $request, User $user)
     {
         $request->validate([
-            'first_name' => 'required|string',
-            'last_name' => 'required|string',
-            'email' => 'required|email|unique:users,email,' . $user->id,
-            'password' => 'nullable|min:6',
+            'plan_id' => 'required',
         ]);
 
-        // $user = User::findOrFail($id);
-        $user->name = $request->input('name');
-        $user->email = $request->input('email');
-
-        if ($request->filled('password')) {
-            $user->password = Hash::make($request->input('password'));
-        }
-
-        $user->save();
-
-        return redirect()->route(self::VIEW . '.index')->with('success', 'User updated successfully');
+        $user->update(['plan_id' => $request->plan_id]);
+        return redirect()->back()->with('success', 'User plan updated successfully');
     }
 
     public function destroy(User $user)
     {
-        // $user = User::findOrFail($id);
-        $user->delete();
 
-        return redirect()->route(self::ROUTE . '.index')->with('success', 'User deleted successfully');
+        exit;
+        // $user = User::findOrFail($id);
+
     }
 
     public function status(User $user)

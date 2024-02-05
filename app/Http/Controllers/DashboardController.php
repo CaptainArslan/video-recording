@@ -87,16 +87,25 @@ class DashboardController extends Controller
                     $user->first_name = 'Test';
                     $user->last_name = 'User';
                     $user->email = $location . '@gmail.com';
-                    $user->password = bcrypt('shada2e3ewdacaeedd233edaf');
+                    $user->password = bcrypt('shada2e3ewdaasacaeedd233edaf');
                     $user->location_id = $location;
                     $user->ghl_api_key = $req->token;
+                    $plan = \App\Models\Plan::where('status', 2)->first();
+                    $user->plan_id = $plan->id;
                     $user->role = 1;
                     // $user->save();
 
                     $user->save();
+
+
+
                 }
                 $user->ghl_api_key = $req->token;
                 $user->save();
+
+                // attacher user with default plan
+                //
+
                 request()->merge(['user_id' => $user->id]);
                 session([
                     'location_id' => $user->location_id,
@@ -119,13 +128,13 @@ class DashboardController extends Controller
                     request()->code = $token;
                     $res->crm_connected = ghl_token(request(), '1', 'eee');
                     if (!$res->crm_connected) {
-                        $res = ConnectOauth($req->location, $res->token);
+                        $res->crm_connected = ConnectOauth($req->location, $res->token);
                     }
                 } else {
                     $res->crm_connected = ConnectOauth($req->location, $res->token);
                 }
                 $res->is_crm = $res->crm_connected;
-
+                $res->token_id = encrypt($res->user_id);
                 return response()->json($res);
             }
 

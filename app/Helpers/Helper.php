@@ -160,6 +160,7 @@ function getFormFields($table, $skip = [], $user = '', $forcf = false, $checkcf 
     $form = [];
     foreach ($fields as $key => $field) {
         $key1 = ucwords(str_replace('_', ' ', $key));
+        // $forcf = $table == 'plans' ? 'plans' : $forcf;
         $form[$key] = createField($key, getFieldType($key), $field, $field, true, $user->$key ?? '', $col = 6, getoptions(getFieldType($key), $key, $user->id ?? '', $forcf), $checkcf = null);
     }
 
@@ -249,9 +250,17 @@ function getFieldType($type)
 function getoptions($type, $key, $id, $class)
 {
     $type = strtolower($type);
+
+    if ($class == 'plans' && $key = 'list') {
+        return \App\Models\Plan::pluck('title', 'id')->toArray();
+    }
     if (strpos($type, 'select') !== false && $key == 'status') {
         // return User::pluck('first_name', 'id')->toArray();
-        return ['1' => 'Active', '0' => 'Inactive'];
+        $status = ['1' => 'Active', '0' => 'Inactive'];
+        if ($class == 'plans') {
+            $status['2'] = 'Active - Default';
+        }
+        return $status;
     } else {
         return [];
     }
@@ -310,7 +319,7 @@ function ghl_api_call($url = '', $method = 'get', $data = '', $headers = [], $js
         if (session('cronjob')) {
             return false;
         }
-        exit('No Token');
+        return 'No token';
     }
 
     $baseurl = 'services.leadconnectorhq.com/';
@@ -320,7 +329,7 @@ function ghl_api_call($url = '', $method = 'get', $data = '', $headers = [], $js
     $location = get_setting($userId, 'location_id');
     $headers['Version'] = $version;
 
-    if (strpos($url, 'custom') !== false && strpos($url, 'locations/') === false) {
+    if ((strpos($url, 'custom') !== false || strpos($url, 'tags') !== false) && strpos($url, 'locations/') === false) {
         $url = 'locations/' . $location . '/' . $url;
     }
     if (strtolower($method) == 'get') {
@@ -330,6 +339,7 @@ function ghl_api_call($url = '', $method = 'get', $data = '', $headers = [], $js
             $url .= 'locationId=' . $location;
         }
     }
+
     if ($token) {
         $headers['Authorization'] = $bearer . $token;
     }
@@ -617,6 +627,8 @@ function ConnectOauth($loc, $token, $method = '')
     $red = json_decode($red);
     if ($red && property_exists($red, 'redirectUrl')) {
         $url = $red->redirectUrl;
+
+
         $parts = parse_url($url);
         parse_str($parts['query'], $query);
         // dd($query);
