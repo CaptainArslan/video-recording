@@ -139,6 +139,43 @@
             face: null
         };
 
+        var videoObj = {
+            title: 'YouTube video player',
+            src: 'https://www.youtube.com/embed/bXlQ3Mw4uGc?si=GcNQKPVx13MzvbB0',
+            short: "https://www.youtube.com/embed/bXlQ3Mw4uGc?si=GcNQKPVx13MzvbB0" // I assume this is for a short URL, which isn't being used currently.
+        };
+
+        let iframeallow =
+            `accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share`;
+
+        function iframeGen(is_html = false) {
+            const iframe = document.createElement('iframe');
+
+            iframe.width = '560';
+            iframe.height = '315';
+            iframe.src = videoObj.src;
+            iframe.title = videoObj.title;
+            iframe.frameBorder = '0';
+            iframe.allow =
+                iframeallow;
+            iframe.allowFullscreen = true;
+
+            if (is_html) {
+                return `<iframe
+                width="${iframe.width}"
+                height="${iframe.height}"
+                src="${iframe.src}"
+                title="${iframe.title}"
+                frameborder="${iframe.frameBorder}"
+                allow="${iframeallow}"
+                allowfullscreen>
+            </iframe>`;
+            }
+
+            return iframe;
+        }
+
+
         let is_company = `{{ is_company() }}` == '0';
 
         if (window.self == window.parent && is_company) {
