@@ -33,9 +33,12 @@
     <!--  Body Wrapper -->
     <div class="page-wrapper" id="main-wrapper" data-layout="vertical" data-navbarbg="skin6" data-sidebartype="full"
         data-sidebar-position="fixed" data-header-position="fixed">
-        @include('partials.sidebar')
+        @if (!is_company())
+            @include('partials.sidebar')
+        @endif
+
         <!--  Main wrapper -->
-        <div class="body-wrapper" @if (!is_role() == 'super_admin' || !is_role() == 'admin') style=" margin-left: 0px" @endif>
+        <div class="body-wrapper" @if (is_company()) style=" margin-left: 0px" @endif>
             @include('partials.header')
             <div class="container-fluid">
                 @if (session('success'))

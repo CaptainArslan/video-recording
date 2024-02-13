@@ -19,7 +19,7 @@
                             <span class="hide-menu">Dashboard</span>
                         </a>
                     </li>
-                    @if (is_role() == 'user' || is_role() == 'company' || is_role() == 'admin')
+                    @if (is_role() == 'user' || is_role() == 'company')
                         <li class="sidebar-item">
                             <a class="sidebar-link" href="{{ route('recordings.index') }}" aria-expanded="false">
                                 <span>

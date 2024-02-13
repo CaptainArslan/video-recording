@@ -24,7 +24,7 @@ class PlanController extends Controller
 
     protected $actions = [
         'edit' => true,
-        'destroy' => true,
+        // 'destroy' => true,
     ];
 
     public function __construct()
@@ -78,7 +78,6 @@ class PlanController extends Controller
     {
         $this->skip = array_merge($this->skip, ['description']);
         $formFields = getFormFields(self::TABLE, $this->skip);
-        // dd($formFields);
 
         return view(self::VIEW . '.store', get_defined_vars());
     }
@@ -134,8 +133,7 @@ class PlanController extends Controller
      */
     public function edit(Plan $plan)
     {
-        // $user = User::findOrFail($id);
-        $this->skip = array_merge($this->skip, []);
+        $this->skip = array_merge($this->skip, ['description']);
         $formFields = getFormFields(self::TABLE, $this->skip, $plan);
 
         return view(self::VIEW . '.edit', get_defined_vars());
@@ -154,14 +152,13 @@ class PlanController extends Controller
             'price' => 'required|gte:0',
             'limit' => 'required|gte:0',
             'recording_minutes_limit' => 'required|gt:0',
-            // 'description' => 'required|string|max:255',
             'status' => 'required|in:0,1,2',
         ]);
-        // dd($request->only('title', 'price', 'recording_minutes_limit', 'limit', 'description', 'status'));
-        // User::create($request->all());
+
         if ($request->status == 2) {
             Plan::where('status', 2)->update(['status' => 1]);
         }
+
         Plan::where('id', $id)->update([
             'title' => $request->title,
             'price' => $request->price,
@@ -170,6 +167,7 @@ class PlanController extends Controller
             'description' => $request->description,
             'status' => $request->status,
         ]);
+
         return redirect()->back()->with('success', self::VIEW . ' updated successfully');
     }
 

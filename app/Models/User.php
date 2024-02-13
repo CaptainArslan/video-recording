@@ -89,7 +89,10 @@ class User extends Authenticatable implements JWTSubject
         return $this->hasMany(Recording::class);
     }
 
-
+    public function shareLogs(): HasMany
+    {
+        return $this->hasMany(ShareLog::class);
+    }
 
     /**
      * Interact with the user's first name.

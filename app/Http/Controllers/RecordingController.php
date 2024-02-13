@@ -7,6 +7,8 @@ use App\Models\Recording;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Validator;
+use AshAllenDesign\ShortURL\Classes\Builder;
+use Illuminate\Support\Facades\Auth;
 
 class RecordingController extends Controller
 {
@@ -41,6 +43,7 @@ class RecordingController extends Controller
 
     public function __construct()
     {
+
         view()->share([
             'url' => url(self::URL),
             'title' => self::TITLE,
@@ -49,28 +52,52 @@ class RecordingController extends Controller
         ]);
     }
 
-
     public function index()
     {
         $userId = login_id();
-        $user = User::findOrFail($userId);
-        // dd($user->plans->toArray());
-        $recordings = Recording::where('user_id', $userId)->latest()->paginate(getPaginate());
+        $user = auth()->user();
+        //$recordings = Recording::where('user_id', $userId)->latest()->paginate(getPaginate());
+        $fields = getVariables();
+        $tableFields = getTableColumns('share_logs', ['id', 'created_at', 'updated_at', 'deleted_at', 'user_id']);
         return view('recording.index', get_defined_vars());
     }
 
     public function store(Request $request)
     {
+
+        $user = auth()->user();
+        if (($user->plan->limit == $user->recordings->count()) || ($user->plan->limit < $user->recordings->count())) {
+            return response()->json(['success' => false, 'message' => 'You have reached your limit.']);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'video' => 'required',
+            'videoUrl' => 'nullable',
+            'poster' => 'required',
+            'posterUrl' => 'nullable',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'message' => $validator->errors()->first()]);
+        }
+
         $recording = new Recording();
-        $recording->user_id = login_id();
-
+        $recording->user_id = $user->id;
         $recording->title = Carbon::now()->format('Y-m-d H:i:s');
-
         $recording->description = generateRandomQuote();
         $recording->file = $request->video;
         $recording->file_url = $request->videoUrl;
 
-        $recording->short_url = $request->shortUrl;
+        try {
+            $builder = new Builder();
+            $shortURLObject = $builder->destinationUrl($request->videoUrl)->make();
+            $shortURL = $shortURLObject->default_short_url;
+
+            $recording->short_url = $shortURL;
+        } catch (\Throwable $th) {
+            report($th);
+            $recording->short_url = null;
+        }
 
         $recording->poster = $request->poster;
         $recording->poster_url = $request->posterUrl;
@@ -91,14 +118,32 @@ class RecordingController extends Controller
 
     public function show($id)
     {
-        $recording = Recording::findOrFail(decrypt($id));
+        try {
+            $id = decrypt($id);
+        } catch (\Throwable $th) {
+            return response()->json(['success' => false, 'message' => 'Error Occured while fetching recording.']);
+        }
+        $recording = Recording::findOrFail($id);
         return view('recording.show', get_defined_vars());
     }
 
+    public function getData()
+    {
+        $user = Auth::user();
+        $recordings = Recording::where('user_id', $user->id)->latest()->paginate(getPaginate());
+
+        $data = [
+            'recordings' => $recordings,
+        ];
+
+        return response()->json([
+            'success' => true,
+            'data' => $recordings
+        ]);
+    }
 
     public function update(Request $request, $id)
     {
-
         $validator = Validator::make($request->all(), [
             'title' => 'required|string',
             'description' => 'nullable|string',
@@ -109,13 +154,43 @@ class RecordingController extends Controller
         }
 
         try {
+            try {
+                $id = decrypt($id);
+            } catch (\Throwable $th) {
+                // $id = $id;
+                info($th->getMessage());
+                return response()->json(['success' => false, 'message' => 'Error Occured while fetching recording.']);
+            }
+
             $recording = Recording::findOrFail($id);
-            $recording->title = $request->title;
-            $recording->description = $request->description;
-            $recording->save();
+
+            $user = Auth::user();
+            if ($recording->user_id != $user->id) {
+                return response()->json(['success' => false, 'message' => 'You are not authorized to update this recording.']);
+            }
+
+            $recording->update([
+                'title' => $request->title,
+                'description' => $request->description,
+            ]);
             return response()->json(['success' => true, 'message' => 'Recording updated successfully.']);
         } catch (\Throwable $th) {
             return response()->json(['success' => false, 'message' => 'Error Occured while updating recording.']);
         }
+    }
+
+
+    public function destroy($id)
+    {
+        try {
+            $id = decrypt($id);
+        } catch (\Throwable $th) {
+            // $id = $id;
+            info($th->getMessage());
+            return response()->json(['success' => false, 'message' => 'Error Occured while fetching recording.']);
+        }
+        $recording = Recording::findOrFail($id);
+        $recording->delete();
+        return response()->json(['success' => true, 'message' => 'Recording deleted successfully.']);
     }
 }

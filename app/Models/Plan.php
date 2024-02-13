@@ -28,6 +28,8 @@ class Plan extends Model
         switch ($this->status) {
             case 1:
                 return '<span class="badge bg-primary rounded-3 fw-semibold">Active</span>';
+            case 2:
+                return '<span class="badge bg-info rounded-3 fw-semibold">Default</span>';
             default:
                 return '<span class="badge bg-danger rounded-3 fw-semibold">Inactive</span>';
         }

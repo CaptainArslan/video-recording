@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\ShareLog;
-use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Auth;
+use Yajra\DataTables\Facades\DataTables;
 
 class ShareLogController extends Controller
 {
@@ -13,9 +15,23 @@ class ShareLogController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function index()
+    public function index(Request $request)
     {
-        //
+        if ($request->ajax()) {
+            $user = Auth::user();
+            $model = ShareLog::where('user_id', $user->id)->latest()->orderBy('id', 'DESC')->get();
+
+            return DataTables::of($model)
+                ->addIndexColumn()
+                ->editColumn('recording_id', function ($row) {
+                    return $row->recording?->title;
+                })
+                ->editColumn('status', function ($row) {
+                    return $row->status == 0 ? 'Failed' : 'Sent';
+                })
+                ->rawColumns(['status'])
+                ->toJson();
+        }
     }
 
     /**

@@ -7,6 +7,7 @@ use App\Http\Controllers\ContactController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\RecordingController;
+use App\Http\Controllers\ShareLogController;
 
 /*
 |--------------------------------------------------------------------------
@@ -30,7 +31,8 @@ Route::get('check/auth/error', [DashboardController::class, 'authError'])->name(
 Route::get('checking/auth', [DashboardController::class, 'authChecking'])->name('auth.checking');
 
 Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-Route::middleware('auth', 'auto_auth')->group(function () {
+
+Route::middleware('auth', 'auto_auth', 'is_admin')->group(function () {
     Route::get('/profile', [UserController::class, 'profile'])->name('profile');
     Route::post('/profile', [UserController::class, 'updateProfile'])->name('profile.update');
     Route::get('/password', [UserController::class, 'password'])->name('password');
@@ -48,28 +50,18 @@ Route::middleware('auth', 'auto_auth')->group(function () {
         Route::get('/{user}', [UserController::class, 'destroy'])->name('destroy');
     });
 
-    Route::prefix('contacts')->name('contacts.')->group(function () {
-        Route::get('/', [ContactController::class, 'index'])->name('index');
-        Route::get('/create', [ContactController::class, 'create'])->name('create');
-        Route::post('/', [ContactController::class, 'store'])->name('store');
-        Route::get('/{contact}/edit', [ContactController::class, 'edit'])->name('edit');
-        Route::post('/{contact}', [ContactController::class, 'update'])->name('update');
-        Route::get('/{contact}', [ContactController::class, 'destroy'])->name('destroy');
-        Route::get('/sync/crm', [ContactController::class, 'sync'])->name('sync');
-    });
-
     Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
     Route::post('/settings', [SettingController::class, 'store'])->name('settings.store');
     Route::get('authorization/crm/oauth/callback', [SettingController::class, 'goHighLevelCallback'])->name('authorization.gohighlevel.callback');
-    Route::get('/loginwith/{user}', [UserController::class, 'loginWith'])->name('users.loginwith');
+    // Route::get('/loginwith/{user}', [UserController::class, 'loginWith'])->name('users.loginwith');
     Route::get('/backtoadmin', [UserController::class, 'backToAdmin'])->name('backtoadmin');
 });
 
-
-Route::resource('recordings', RecordingController::class);
-Route::get('contact', [ContactController::class, 'contacts'])->name('ghl.contacts');
-Route::post('sendData', [ContactController::class, 'processConv'])->name('ghl.sendData');
-Route::get('tags', [ContactController::class, 'tags'])->name('ghl.tags');
-
-// agency user login data
-// Route::get('user', [UserController::class, 'index'])->name('user');
+Route::middleware(['auto_auth', 'is_company'])->group(function () {
+    Route::resource('recordings', RecordingController::class);
+    Route::get('recording/get-data', [RecordingController::class, 'getData'])->name('recording.data');
+    Route::get('contact', [ContactController::class, 'contacts'])->name('ghl.contacts');
+    Route::post('sendData', [ContactController::class, 'processConv'])->name('ghl.sendData');
+    Route::get('tags', [ContactController::class, 'tags'])->name('ghl.tags');
+    Route::get('contact/get-data', [ShareLogController::class, 'index'])->name('sharelog.data');
+});

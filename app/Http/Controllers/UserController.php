@@ -67,11 +67,13 @@ class UserController extends Controller
 
                     return $actionhtml;
                 })
-
+                ->editColumn('plan_id', function ($row) {
+                    return $row->plan?->title;
+                })
                 ->editColumn('status', function ($row) {
                     return $row->getStatus();
                 })
-                ->rawColumns(['action', 'status', 'role'])
+                ->rawColumns(['action', 'status', 'role', 'plan_id'])
                 ->toJson();
         }
 

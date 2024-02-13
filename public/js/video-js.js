@@ -3,7 +3,7 @@
 var isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 var isEdge = /Edge/.test(navigator.userAgent);
 
-function applyAudioWorkaround() {
+function applyAudioWorkaround(options) {
     // console.log('applyAudioWorkaround');
     if (isSafari || isEdge) {
         if (isSafari && window.MediaRecorder !== undefined) {
@@ -21,7 +21,7 @@ function applyAudioWorkaround() {
     }
 }
 
-function applyVideoWorkaround() {
+function applyVideoWorkaround(options) {
     // console.log('applyVideoWorkaround');
     // use correct video mimetype for opera
     if (!!window.opera || navigator.userAgent.indexOf('OPR/') !== -1) {

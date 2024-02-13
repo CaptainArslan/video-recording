@@ -17,9 +17,9 @@ class CreatePlanUserTable extends Migration
             $table->id();
             $table->foreignId('plan_id')->constrained('plans')->onDelete('cascade');
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
-            $table->tinyInteger('status')->default(1);
-            $table->date('start_date');
-            $table->date('end_date');
+            // $table->tinyInteger('status')->default(1);
+            // $table->date('start_date');
+            // $table->date('end_date');
             $table->timestamps();
         });
     }

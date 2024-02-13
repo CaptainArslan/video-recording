@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Settings')
+@section('title', 'Show Recording')
 @section('section')
     <div class="card shadow-none">
         <div class="card-body d-flex align-items-center justify-content-between">
