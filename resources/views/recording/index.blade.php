@@ -313,7 +313,6 @@
                     elements.show();
                 }
             }
-
             // to get user permission
             function init_perm(instance = null) {
                 navigator.mediaDevices.getUserMedia({
@@ -878,7 +877,7 @@
                     formData.forEach((value, key) => {
                         formDataObject[key] = value;
                     });
-                    console.log(contactChunks);
+                    // console.log(contactChunks);
                     console.time();
                     if (action == defChunks) {
 
@@ -908,7 +907,6 @@
                                     message
                                 );
                             } else {
-
                                 $('#contact-select').val('').trigger('change');
                                 $('#tag-select').val('').trigger('change');
                                 $('#subject').val('');
@@ -918,8 +916,9 @@
                                 loadingStop();
                             }
                         };
+                        loadingStop();
                     } else {
-                        processData(formData).then(x => {
+                        processDataShare(formData).then(x => {
                             console.timeEnd();
                             loadingStop();
                             console.log(x);
@@ -996,7 +995,7 @@
             });
         }
 
-        function processData(formData) {
+        function processDataShare(formData) {
 
             return new Promise((resolve, reject) => {
                 //$('#contact-select').val()
