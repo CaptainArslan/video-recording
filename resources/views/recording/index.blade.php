@@ -1072,7 +1072,7 @@
                                 </div>
                                 <p class="card-text">${recording.description}</p>
                                 <div class="d-flex justify-content-between">
-                                    <button class="btn btn-danger share" data-bs-toggle="tooltip" data-value="${recording.id}" data-toggle="modal" data-target="#share-modal" data-title="${title}" data-text="${recording.file_url}" data-short="${linkurl}">
+                                    <button class="btn btn-danger share" data-bs-toggle="tooltip" data-value="${recording.id}" data-toggle="modal" data-target="#share-modal" data-title="${title}" data-text="${recording.short_url ?? recording.file_url}" data-short="${recording.short_url ?? linkurl}">
                                         <i class="fa fa-share"></i> Share
                                     </button>
                                 </div>
