@@ -1,13 +1,14 @@
 <?php
 
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\PlanController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\SettingController;
+use App\Http\Controllers\ShareLogController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\RecordingController;
-use App\Http\Controllers\ShareLogController;
 
 /*
 |--------------------------------------------------------------------------
@@ -54,11 +55,12 @@ Route::middleware('auth', 'auto_auth', 'is_admin')->group(function () {
     Route::post('/settings', [SettingController::class, 'store'])->name('settings.store');
     Route::get('authorization/crm/oauth/callback', [SettingController::class, 'goHighLevelCallback'])->name('authorization.gohighlevel.callback');
     // Route::get('/loginwith/{user}', [UserController::class, 'loginWith'])->name('users.loginwith');
-    Route::get('/backtoadmin', [UserController::class, 'backToAdmin'])->name('backtoadmin');
+    // Route::get('/backtoadmin', [UserController::class, 'backToAdmin'])->name('backtoadmin');
 });
 
 Route::middleware(['auto_auth', 'is_company'])->group(function () {
     Route::resource('recordings', RecordingController::class);
+    Route::get('custom/{shortURLKey}', [RecordingController::class, 'showRecord']);
     Route::get('recording/get-data', [RecordingController::class, 'getData'])->name('recording.data');
     Route::get('contact', [ContactController::class, 'contacts'])->name('ghl.contacts');
     Route::post('sendData', [ContactController::class, 'processConv'])->name('ghl.sendData');

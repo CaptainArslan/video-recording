@@ -16,6 +16,7 @@
         </div>
         <div class="card-footer">
             <p class="text"> {{ $recording->description }} </p>
+            <b>Total visit: ({{ $visits }})</b>
         </div>
     </div>
 

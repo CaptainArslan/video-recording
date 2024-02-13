@@ -145,7 +145,7 @@
             document.querySelector('body').classList.remove('iframe');
         }
 
-        let ssworker = null;
+        // let ssworker = null;
 
         $(document).ready(function() {
             if (window.parent != window.self) {
@@ -159,7 +159,6 @@
                     $('.share_recording').trigger('click');
                 }
             }, 2000);
-
 
             $.ajaxSetup({
                 headers: {
@@ -382,7 +381,19 @@
                                     player_face = videojs('my-video_face', video_screen, function() {
                                         console.log('videojs-record initialized!');
                                     });
+
                                     player_face.ready(function() {});
+
+                                    // error handling
+                                    player_face.on('deviceError', function() {
+                                        console.warn('device error:', player_face
+                                            .deviceErrorCode);
+                                    });
+
+                                    // user clicked the record button and started recording
+                                    player_face.on('error', function(element, error) {
+                                        console.error(error);
+                                    });
 
                                     player_face.on('finishRecord', function() {
                                         console.log(player_face.recordedData);
@@ -482,6 +493,7 @@
                                         $('.vjs-icon-video-perm')
                                             .trigger(
                                                 'click');
+                                        console.log(videoDeviceId);
                                         if (videoDeviceId != '') {
                                             player_face.record().setVideoInput(videoDeviceId);
 
@@ -614,13 +626,14 @@
                     })
                     .then(response => response.json())
                     .then(data => {
+                        // console.log(data);
                         if (data.success) {
                             Swal.fire({
                                 icon: 'success',
                                 title: 'Success',
                                 text: data.message,
                                 showConfirmButton: false,
-                                timer: 1000
+                                timer: 2000
                             });
                             location.reload();
                         } else {
@@ -630,7 +643,6 @@
                                 text: data.message,
                             });
                         }
-                        Swal.close();
                     })
                     .catch(error => {
                         console.error('Error:', error);
@@ -948,6 +960,7 @@
             });
 
             $("#recording-modal").on("hidden.bs.modal", function() {
+                console.log(player);
                 if (player) {
                     player.dispose();
                 }
@@ -1039,7 +1052,7 @@
                 <div class="col-lg-3 col-md-4 col-sm-6 mb-4 d-flex align-items-stretch">
                         <div class="card">
                             <div class="header" style="max-height: 200px; overflow: hidden;">
-                                <a href="${linkurl}">
+                                <a href="${recording.short_url}" target="_blank">
                                     <img src="${recording.poster_url || 'https://via.placeholder.com/600x400'}" alt="${title}" class="card-img-top" style="width: 100%; height: auto;">
                                 </a>
                             </div>
@@ -1052,7 +1065,7 @@
                                         </a>
                                         <div class="dropdown-menu" aria-labelledby="action-buttons">
                                             <a class="dropdown-item" href="javascript:void(0)" data-toggle="modal" data-target="#edit-recording-modal" data-title="${title}" data-description="${recording.description}" data-url="${linkurl}">Edit</a>
-                                            <a class="dropdown-item copy-link" href="javascript:void(0)" data-bs-toggle="tooltip" data-link="${recording.file_url}" title="Copy link" onclick="copyLink(this)">Copy</a>
+                                            <a class="dropdown-item copy-link" href="javascript:void(0)" data-bs-toggle="tooltip" data-link="${recording.short_url ??  recording.file_url}" title="Copy link" onclick="copyLink(this)">Copy</a>
                                             <a class="dropdown-item" href="javascript:void(0)" data-bs-toggle="tooltip" title="Delete Record" onclick='deleteRecordAjax("${deleteurl}")'>Delete</a>
                                         </div>
                                     </div>
