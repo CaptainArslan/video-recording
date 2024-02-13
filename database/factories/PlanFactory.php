@@ -19,7 +19,7 @@ class PlanFactory extends Factory
             'limit' => $this->faker->numberBetween(1, 30),
             'recording_minutes_limit' => $this->faker->numberBetween(1, 50),
             'description' => $this->faker->text(),
-            'status' => $this->faker->numberBetween(0, 1),
+            'status' => 2,
         ];
     }
 }
