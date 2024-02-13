@@ -2,11 +2,11 @@
 @section('title', 'Show Recording')
 @section('section')
     <div class="card shadow-none">
-        <div class="card-body d-flex align-items-center justify-content-between">
+        {{-- <div class="card-body d-flex align-items-center justify-content-between">
             <h3 class="card-title fw-semibold">{{ $recording->title }} </h3>
             <!-- <a href="#" class="btn btn-primary"> New Video </a> -->
             <a class="btn btn-primary" href="{{ route('recordings.index') }}">Back</a>
-        </div>
+        </div> --}}
 
         <div class="card-body">
             <video class="w-100" controls>
@@ -14,10 +14,10 @@
                 Your browser does not support the video tag.
             </video>
         </div>
-        <div class="card-footer">
+        {{-- <div class="card-footer">
             <p class="text"> {{ $recording->description }} </p>
             <b>Total visit: ({{ $visits }})</b>
-        </div>
+        </div> --}}
     </div>
 
 @endsection
