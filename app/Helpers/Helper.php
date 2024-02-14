@@ -383,7 +383,8 @@ function ghl_api_call($url = '', $method = 'get', $data = '', $headers = [], $js
         ]);
     }
 
-    if ($bd && isset($bd->error) && $bd->error == 'Unauthorized') {
+    // if ($bd && isset($bd->error) && $bd->error == 'Unauthorized') {
+    if (isset($bd->error) && strtolower($bd->error) == 'unauthorized') {
         request()->code = get_setting($userId, 'ghl_refresh_token');
         if (strpos($bd->message, 'expired') !== false) {
             if (empty(request()->code)) {
@@ -658,6 +659,7 @@ function formatTimestamp($timestamp, $format)
 //Findoppurtunity
 
 
+
 function getVariables()
 {
     $type = 'location_id';
@@ -665,24 +667,29 @@ function getVariables()
     $user_id = auth()->user()->id;
 
     $res = Setting::where(['user_id' => $user_id, 'key' => $type])->first();
-    $value = $res->value;
-    $loc_customValues = ghl_api_call('locations/' . $value .
-        '/customValues', 'get', '', [], false, true);
-    $loc_customFields = ghl_api_call('locations/' . $value .
-        '/customFields', 'get', '', [], false, true);
+    $value = $res->value ?? null;
+    $loc_customValues = null;
+    $loc_customFields = null;
+    if ($value) {
+        $loc_customValues = ghl_api_call('locations/' . $value .
+            '/customValues', 'get', '', [], false, true);
+        $loc_customFields = ghl_api_call('locations/' . $value .
+            '/customFields', 'get', '', [], false, true);
+    }
+
 
     // $location = ghl_api_call('locations/' . $value, 'get', '', [], false, true);
     // $location = $location->location;
 
     $customValuseKeys = [];
-    foreach ($loc_customValues->customValues as $lv) {
+    foreach ($loc_customValues->customValues ?? [] as $lv) {
 
         $customValuseKeys[] = replace_all_cv($lv->fieldKey, false);
     }
     // dd($loc_customValues->customValues,$customValuseKeys);
 
 
-    $locfields = $loc_customFields->customFields;
+    $locfields = $loc_customFields->customFields ?? [];
     $fieldkeys = [];
     foreach ($locfields as $lvv) {
         // $fieldkeys[] = '{{ '.$lvv->fieldKey.' }}';
@@ -845,6 +852,7 @@ function getVariables()
 
     // return [$c, $loc_customValues, $loc_customFields, $header_templates, $footer_templates];
 }
+
 
 function replace_all_cv($cft, $append = true, $prefix = '')
 {

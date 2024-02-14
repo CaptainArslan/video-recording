@@ -200,12 +200,15 @@ class RecordingController extends Controller
 
     public function showRecord($id)
     {
-        $shortURL = ShortURL::findByKey($id);
-        if (empty($shortURL)) {
-            return redirect()->route('recordings.index')->with('error', 'Invalid URL');
-        }
-        $recording = Recording::where('short_url', $shortURL->default_short_url)->first();
-        $visits = $shortURL->visits->count();
+        // $shortURL = ShortURL::findByKey($id);
+
+        // if (empty($shortURL)) {
+        //     abort(404);
+        // }
+        $url = 'https://ryanvideo.jdftest.xyz/video/' . $id;
+
+        $recording = Recording::where('short_url',  $url)->firstOrFail();
+        // $visits = $shortURL->visits->count();
         return view('recording.show', get_defined_vars());
     }
 }

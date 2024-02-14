@@ -28,7 +28,7 @@
                 <div class="recording" style="width: 100%;"></div>
 
                 <div class="mt-2"></div>
-                <div class="control-buttons mt-2">
+                {{-- <div class="control-buttons mt-2">
                     <button type="button" role="button" class="btn btn-primary mt-4 start_recording" hidden><i
                             class="fa fa-play"></i>
                         &nbsp;&nbsp; Start</button>
@@ -44,7 +44,7 @@
                     <button type="button" role="button" class="btn btn-danger mt-4 stop_recording" hidden><i
                             class="fa fa-stop"></i>
                         &nbsp;&nbsp; Stop </button>
-                </div>
+                </div> --}}
 
                 <button type="button" role="button" class="btn btn-primary mt-4 restart_recording save_recording_btn"
                     data-status="draft">Restart

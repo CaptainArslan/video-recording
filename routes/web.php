@@ -21,12 +21,17 @@ use App\Http\Controllers\RecordingController;
 |
 */
 
+Route::get('video/{shortURLKey}', [RecordingController::class, 'showRecord']);
 Route::get('/', function () {
     return redirect()->route('login');
 });
 
-require __DIR__ . '/auth.php';
+Route::get('/cache', function () {
+    dd('me hn');
+});
 
+require __DIR__ . '/auth.php';
+//
 Route::get('check/auth', [DashboardController::class, 'connect'])->name('auth.check');
 Route::get('check/auth/error', [DashboardController::class, 'authError'])->name('auth.error');
 Route::get('checking/auth', [DashboardController::class, 'authChecking'])->name('auth.checking');
@@ -60,10 +65,11 @@ Route::middleware('auth', 'auto_auth', 'is_admin')->group(function () {
 
 Route::middleware(['auto_auth', 'is_company'])->group(function () {
     Route::resource('recordings', RecordingController::class);
-    Route::get('custom/{shortURLKey}', [RecordingController::class, 'showRecord']);
     Route::get('recording/get-data', [RecordingController::class, 'getData'])->name('recording.data');
     Route::get('contact', [ContactController::class, 'contacts'])->name('ghl.contacts');
     Route::post('sendData', [ContactController::class, 'processConv'])->name('ghl.sendData');
     Route::get('tags', [ContactController::class, 'tags'])->name('ghl.tags');
     Route::get('contact/get-data', [ShareLogController::class, 'index'])->name('sharelog.data');
 });
+
+//

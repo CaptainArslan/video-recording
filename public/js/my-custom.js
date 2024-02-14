@@ -130,6 +130,10 @@ function iframeGen(is_html = false) {
         iframeallow;
     iframe.allowFullscreen = true;
 
+    //     <a href="https://send-link.email/v1/smtp_email/event/clicked/message/eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJtZXNzYWdlSWQiOiJrVjU2Q3RmV0VCSkYxYVk4ZmFPeCIsInVybCI6Imh0dHBzJTNBJTJGJTJGcnlhbnZpZGVvLmpkZnRlc3QueHl6JTJGdmlkZW8lMkZSNGFuZSIsImhvc3QiOiJodHRwczovL3NlbmQtbGluay5lbWFpbCIsImlhdCI6MTcwNzkwODMwMjE1MX0.RJdSwBVnRa43edDR99qqRY-TQ_Uv--DH9NCUp_qZd14" target="_blank" data-saferedirecturl="https://www.google.com/url?q=https://send-link.email/v1/smtp_email/event/clicked/message/eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJtZXNzYWdlSWQiOiJrVjU2Q3RmV0VCSkYxYVk4ZmFPeCIsInVybCI6Imh0dHBzJTNBJTJGJTJGcnlhbnZpZGVvLmpkZnRlc3QueHl6JTJGdmlkZW8lMkZSNGFuZSIsImhvc3QiOiJodHRwczovL3NlbmQtbGluay5lbWFpbCIsImlhdCI6MTcwNzkwODMwMjE1MX0.RJdSwBVnRa43edDR99qqRY-TQ_Uv--DH9NCUp_qZd14&amp;source=gmail&amp;ust=1707994892116000&amp;usg=AOvVaw3yfKrzmlknMQ5H1huwJHjR">
+    //     <img src="https://ci3.googleusercontent.com/meips/ADKq_NZpkr2x0iJ4tglZlld437GWVVUJEaQjeAa72Bk6Hv7hiqAN9VqbRHHwYrvg_XNOGypLk9jMoASJN88_IO--z6g3srUhY5fumJg6Zqe9nLgeEvT1LY2ApgIuBuLOobo1K8ls6MwMsMnuaJGgU9KWaV45FjARcKT7aCLT=s0-d-e1-ft#https://storage.googleapis.com/preview-production-assets/email/img/hl_default_img/promotion-wide.png" style="width:500px;height:400px;max-width:100%;max-height:100%" class="CToWUd" data-bit="iit">
+    //   </a>
+
     if (is_html) {
         return `<iframe
                 width="${iframe.width}"

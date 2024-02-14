@@ -92,7 +92,7 @@ class ContactController extends Controller
     {
 
         $res = ghl_api_call('conversations/search?contactId=' . $contactid, 'GET', '', [], false, true);
-        $actsend = false;
+        $actsend = 0;
         $conversationid = '';
         $type = $data['type'] ?? 'email';
         $type = strtolower($type);
@@ -136,9 +136,11 @@ class ContactController extends Controller
                     'form_data' => $mt
                 ]);
 
-                if ($res && property_exists($res, 'conversionId')) {
-                    $actsend = true;
-                    $conversationid = $res->conversionId;
+
+
+                if ($res && property_exists($res, 'conversationId')) {
+                    $actsend = 1;
+                    $conversationid = $res->conversationId;
                 }
 
                 $msg = $res->msg ?? $res->message ?? json_encode($res);
@@ -160,30 +162,30 @@ class ContactController extends Controller
             if (strlen($tags) > 255) {
                 $tags = substr(($tags), 0, 255);
             }
-            if ($shareLog) {
-                if ($subject != '') {
-                    $shareLog->subject = $subject;
-                }
-                if ($tags != '') {
-                    $shareLog->all_tags = $tags;
-                }
-                $shareLog->status = $actsend;
-                $shareLog->conversation_id = $conversationid;
-                $shareLog->message = $msg;
-            } else {
+            //dd($tags);
+            if (!$shareLog) {
                 $shareLog = new ShareLog();
                 $shareLog->user_id = $data['login_id']; //foreign user
                 $shareLog->contact_id = $contactid;
                 $shareLog->contact_name = $contactName;
                 $shareLog->type = $type;
-                $shareLog->subject = $data['subject'] ?? "";
+
                 $shareLog->body = $data['body'];
                 $shareLog->recording_id = $data['recording_id']; //foreign recording
-                $shareLog->all_tags = $tags;
-                $shareLog->status = $actsend;
-                $shareLog->conversation_id = $conversationid;
-                $shareLog->message = $msg;
+
+
+
+
             }
+            $shareLog->conversation_id = $conversationid;
+            if ($subject != '') {
+                $shareLog->subject = $subject;
+            }
+            if ($tags != '') {
+                $shareLog->all_tags = $tags;
+            }
+            $shareLog->status = $actsend;
+            $shareLog->message = $msg;
             $shareLog->save();
             if ($contactName != '') {
                 ShareLog::where(['contact_id' => $contactid])->update([
@@ -192,6 +194,7 @@ class ContactController extends Controller
             }
         } catch (Throwable $th) {
 
+            //dd($th);
             //throw $th;
         }
         return 'Added to Process';
