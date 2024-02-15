@@ -179,6 +179,8 @@ return [
         Yajra\DataTables\DataTablesServiceProvider::class,
         // Jwt Auth token
         Tymon\JWTAuth\Providers\LaravelServiceProvider::class,
+        // Laravel FFMpeg
+        // ProtoneMedia\LaravelFFMpeg\Support\ServiceProvider::class,
     ],
 
     /*
@@ -233,6 +235,7 @@ return [
         'URL' => Illuminate\Support\Facades\URL::class,
         'Validator' => Illuminate\Support\Facades\Validator::class,
         'View' => Illuminate\Support\Facades\View::class,
+        // 'FFMpeg' => ProtoneMedia\LaravelFFMpeg\Support\FFMpeg::class
 
     ],
 

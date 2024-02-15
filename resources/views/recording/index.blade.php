@@ -28,6 +28,37 @@
             font-size: 2em;
             line-height: 1.4em;
         }
+
+
+        #my-video {
+            min-height: 300px !important;
+        }
+
+        div#my-video-face :not(video) {
+            display: none;
+        }
+
+        div#my-video-face video,
+        div#my-video-face {
+            width: 200px !important;
+            height: 200px !important;
+        }
+
+        div#my-video-face {
+            position: absolute;
+            z-index: 9999999;
+            bottom: 11%;
+            left: 4%;
+        }
+
+        canvas#audioCanvas {
+
+            height: 30px;
+        }
+
+        div#my-video-face.hide {
+            display: none;
+        }
     </style>
 @endsection
 @section('section')
@@ -45,7 +76,8 @@
                 }
 
             @endphp
-            <h3 class="card-title fw-semibold">{{ $title }} ({{ $recCount }} / {{ $limit }})
+            <h3 class="card-title fw-semibold">{{ $title }} (<span id="user_rec">{{ $recCount }}</span> / <span
+                    id="user_limit">{{ $limit }}</span>)
             </h3>
             <!-- <a href="javascript:void(0)" class="btn btn-primary"> New Video </a> -->
             <div class="dropdown">
@@ -118,29 +150,118 @@
 
 @endsection
 @section('js')
-    <script src="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.js"></script>
     {{-- <script src="{{ asset('js/summernote.js') }}"></script> --}}
-    @include('recording.summernote')
     {{-- <script src="https://cdn.jsdelivr.net/npm/video-stream-merger@4.0.1/dist/video-stream-merger.min.js"></script> --}}
-    <script src="{{ asset('js/video-stream-merger.js') }}"></script>
-
+    <script src="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.js"></script>
     @include('partials.datatable-js')
+    @include('recording.summernote')
+    <script src="{{ asset('js/video-stream-merger.js') }}"></script>
 
     <script>
         var player = null;
         let player_face = null;
-
+        let is_company = `{{ is_company() }}` == '0';
+        var pipEnabled = false;
+        var pipStatusMsg;
+        let maxLength = "{{ $user->plan->recording_minutes_limit }}" * 60;
+        let recordWithFace = true;
         let blobs = {
             screen: null,
             face: null
         };
 
-        let is_company = `{{ is_company() }}` == '0';
+        var video_recorder = {
+            poster: "",
+            video: null,
+            status: 'draft',
+            posterUrl: null,
+            videoUrl: null,
+            face: "",
+            faceUrl: null
+        };
 
         if (window.self == window.parent && is_company) {
             document.querySelector('body').classList.remove('iframe');
         }
 
+        let audioRecord = null;
+
+        function startRecord(audioSource) {
+            let canvas = document.querySelector('#audioCanvas');
+            if (audioSource == '' || !audioSource) {
+                if (audioRecord) {
+                    try {
+                        audioRecord.stop();
+                    } catch (error) {}
+                }
+                canvas.setAttribute('hidden', true);
+                audioRecord = null;
+            }
+
+            audioRecord = navigator.mediaDevices.getUserMedia({
+                audio: {
+                    deviceId: {
+                        exact: audioSource ?? 'default'
+                    }
+                },
+                video: false
+            });
+            audioRecord.then(function onSuccess(stream) {
+                audioContext = window.AudioContext || window.webkitAudioContext || window.mozAudioContext || window
+                    .msAudioContext;
+                try {
+                    context = new audioContext();
+                } catch (e) {
+                    console.log('not support AudioContext');
+                }
+
+                audioInput = context.createMediaStreamSource(stream);
+                var binaryData = [];
+                binaryData.push(stream);
+                microphone.src = window.URL.createObjectURL(new Blob(binaryData, {
+                    type: 'application/zip'
+                }));
+                microphone.onloadedmetadata = function(e) {};
+                var analyser = context.createAnalyser();
+                audioInput.connect(analyser);
+
+                drawSpectrum(analyser);
+            });
+            audioRecord.catch(function(e) {
+                try {
+                    tip.innerHTML = e.name;
+                } catch (error) {}
+            });
+
+            var drawSpectrum = function(analyser) {
+                let cwidth = canvas.width,
+                    cheight = canvas.height,
+                    meterWidth = 8,
+                    gap = 2,
+                    meterNum = cwidth / (meterWidth + gap),
+                    ctx = canvas.getContext('2d'),
+                    gradient = ctx.createLinearGradient(0, 0, 0, cheight);
+                gradient.addColorStop(1, '#a467af');
+                gradient.addColorStop(0.3, '#ff0');
+                gradient.addColorStop(0, '#f00');
+                ctx.fillStyle = gradient;
+                canvas.removeAttribute('hidden', true);
+                var drawMeter = function() {
+                    var array = new Uint8Array(analyser.frequencyBinCount);
+                    analyser.getByteFrequencyData(array);
+
+                    var step = Math.round(array.length / meterNum);
+                    ctx.clearRect(0, 0, cwidth, cheight);
+                    for (var i = 0; i < meterNum; i++) {
+                        var value = array[i * step];
+
+                        ctx.fillRect(i * (meterWidth + gap), cheight - value, meterWidth, cheight);
+                    }
+                    requestAnimationFrame(drawMeter);
+                }
+                requestAnimationFrame(drawMeter);
+            }
+        }
         $(document).ready(function() {
 
             if (window.parent != window.self) {
@@ -165,20 +286,6 @@
             $('.save_video, .restart_recording, .save_recording_btn').hide();
             hideControls();
 
-            var video_recorder = {
-                poster: "",
-                video: null,
-                status: 'draft',
-                posterUrl: null,
-                videoUrl: null,
-            };
-
-
-            // let sr = document.createElement('script');
-            // sr.src = 'https://cdn.jsdelivr.net/npm/video-stream-merger@4.0.1/dist/video-stream-merger.min.js';
-            // document.head.append(sr);
-
-
             // document.querySelector('.recording').insertAdjacentHTML('afterbegin',
             //     `<video id="my-final-source"  class="video-js vjs-default-skin mt-4 h-full w-100" ></video>`
             // );
@@ -199,10 +306,6 @@
             //     document.querySelector('#my-final-source').srcObject = composite1.result;
             // }, 3000);
 
-            let maxLength = "{{ $user->plan->recording_minutes_limit }}" * 60;
-
-            var pipEnabled = false;
-            var pipStatusMsg;
 
             if (!('pictureInPictureEnabled' in document)) {
                 pipStatusMsg = 'The Picture-in-Picture API is not available.';
@@ -211,9 +314,22 @@
             } else {
                 pipEnabled = true;
             }
-
+            let video_setting = {
+                width: {
+                    min: 640,
+                    ideal: 640,
+                    max: 1280
+                },
+                height: {
+                    min: 480,
+                    ideal: 480,
+                    max: 720
+                },
+            };
+            //userinactive
             let video = {
                 controls: true,
+                // autoMuteDevice: true,
                 controlBar: {
                     fullscreenToggle: true,
                     volumePanel: true,
@@ -222,10 +338,13 @@
                 plugins: {
                     record: {
                         audio: true,
-                        pip: pipEnabled,
-                        video: true,
+                        // pip: pipEnabled,
+                        video: video_setting,
+
                         maxLength: maxLength,
                         displayMilliseconds: false,
+                        frameWidth: 1080,
+                        frameHeight: 720,
                         // debug: true,
                         muted: false
                     }
@@ -233,16 +352,18 @@
             };
 
             let video_screen = {
-                controls: true,
+                controls: false,
                 controlBar: {
-                    fullscreenToggle: true,
-                    volumePanel: true,
-                    customControlSpacer: true
+                    fullscreenToggle: false,
+                    volumePanel: false,
+                    customControlSpacer: false
                 },
                 plugins: {
                     record: {
-                        pip: pipEnabled,
-                        video: true,
+                        // pip: pipEnabled,
+                        audio: false,
+                        video: video_setting,
+
                         maxLength: maxLength,
                         displayMilliseconds: false,
                         // debug: true,
@@ -271,14 +392,6 @@
                 }
             };
 
-            function hideControls(param = true) {
-                var elements = $('.start_recording, .pause_recording, .resume_recording, .stop_recording');
-                if (param) {
-                    elements.hide();
-                } else {
-                    elements.show();
-                }
-            }
             // to get user permission
             function init_perm(instance = null) {
                 navigator.mediaDevices.getUserMedia({
@@ -287,7 +400,6 @@
                     })
                     .then(stream => {
                         hideControls();
-                        console.log('getUserMediaDictionary');
                         getUserMediaDictionary(instance);
                     })
                     .catch(err => {
@@ -295,19 +407,63 @@
                     });
             }
 
-            function captureFirstFrame(videoElement) {
+            // function captureFirstFrame(videoElement) {
+            //     const canvas = document.createElement('canvas');
+            //     const ctx = canvas.getContext('2d');
+            //     const firstFrameWidth = videoElement.videoWidth;
+            //     const firstFrameHeight = videoElement.videoHeight;
+            //     canvas.width = firstFrameWidth;
+            //     canvas.height = firstFrameHeight;
+            //     ctx.drawImage(videoElement, 0, 0, firstFrameWidth, firstFrameHeight);
+            //     return new Promise((resolve, reject) => {
+            //         canvas.toBlob(blob => {
+            //             const a = document.createElement('a');
+            //             const url = URL.createObjectURL(blob);
+            //             URL.revokeObjectURL(url);
+            //             resolve(blob);
+            //         }, 'image/png');
+            //     });
+            // }
+
+            async function captureAndCombineFrames(videoElement1, videoElement2) {
+                // Capture the first frame of the first video
+                const firstFrame1 = await captureFirstFrame(videoElement1);
+
+                // Capture the first frame of the second video
+                const firstFrame2 = await captureFirstFrame(videoElement2);
+
+                // Create a canvas to draw the images
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
-                const firstFrameWidth = videoElement.videoWidth;
-                const firstFrameHeight = videoElement.videoHeight;
-                canvas.width = firstFrameWidth;
-                canvas.height = firstFrameHeight;
-                ctx.drawImage(videoElement, 0, 0, firstFrameWidth, firstFrameHeight);
+
+                // Set canvas dimensions to accommodate both images
+                canvas.width = Math.max(videoElement1.videoWidth, videoElement2.videoWidth);
+                canvas.height = videoElement1.videoHeight + videoElement2.videoHeight;
+
+                // Draw the first frame of the first video on the canvas
+                ctx.drawImage(firstFrame1, 0, 0);
+
+                // Draw the first frame of the second video on the bottom left corner
+                ctx.drawImage(firstFrame2, 0, videoElement1.videoHeight);
+
+                // Convert canvas content to a blob
                 return new Promise((resolve, reject) => {
                     canvas.toBlob(blob => {
-                        const a = document.createElement('a');
-                        const url = URL.createObjectURL(blob);
-                        URL.revokeObjectURL(url);
+                        resolve(blob);
+                    }, 'image/png');
+                });
+            }
+
+            async function captureFirstFrame(videoElement) {
+                return new Promise((resolve, reject) => {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    const firstFrameWidth = videoElement.videoWidth;
+                    const firstFrameHeight = videoElement.videoHeight;
+                    canvas.width = firstFrameWidth;
+                    canvas.height = firstFrameHeight;
+                    ctx.drawImage(videoElement, 0, 0, firstFrameWidth, firstFrameHeight);
+                    canvas.toBlob(blob => {
                         resolve(blob);
                     }, 'image/png');
                 });
@@ -331,6 +487,42 @@
 
             }
 
+            function recordUserFace() {
+                if (recordWithFace) {
+                    player_face = videojs('my-video-face', video_screen,
+                        function() {
+                            // // console.log('videojs-record initialized!');
+                        });
+                    player_face.ready(function() {
+                        setTimeout(function() {
+                            var videoDeviceId = $('#video-select').val();
+                            if (videoDeviceId != '') {
+                                player_face.record().setVideoInput(videoDeviceId);
+                            }
+                            $('.vjs-icon-video-perm')
+                                .trigger('click');
+                            document.querySelector('#my-video-face').setAttribute('class', '');
+                        }, 500);
+
+                    });
+
+                    // error handling
+                    player_face.on('deviceError', function() {
+                        console.warn('device error:', player_face
+                            .deviceErrorCode);
+                    });
+
+                    // user clicked the record button and started recording
+                    player_face.on('error', function(element, error) {
+                        console.error(error);
+                    });
+
+                    player_face.on('finishRecord', function() {
+                        blobs.face = player_face.recordedData;
+                    });
+                }
+            }
+
             function getUserMediaDictionary(instance = null) {
                 try {
                     navigator.mediaDevices.enumerateDevices()
@@ -344,10 +536,13 @@
                                 }
                             });
                             // console.log(player, player_face);
+                            $('.start_recording').hide();
+                            $('.save_recording_btn').hide();
 
                             if (player) {
                                 player.dispose();
                             }
+
                             if (player_face) {
                                 player_face.dispose();
                             }
@@ -359,33 +554,13 @@
 
                             // if (instance == 'screen1') {
                             if (instance == 'screen') {
+
+
                                 document.querySelector('.recording').insertAdjacentHTML('afterbegin',
-                                    `<video id="my-video-face" hidden playsinline class="video-js vjs-default-skin mt-4 h-full w-100" ></video>`
+                                    `<video id="my-video-face" playsinline class="video-js hide vjs-default-skin mt-4 h-full w-100" ></video>`
                                 );
 
-                                setTimeout(function() {
-                                    player_face = videojs('my-video-face', video_screen, function() {
-                                        // // console.log('videojs-record initialized!');
-                                    });
-
-                                    player_face.ready(function() {});
-
-                                    // error handling
-                                    player_face.on('deviceError', function() {
-                                        console.warn('device error:', player_face
-                                            .deviceErrorCode);
-                                    });
-
-                                    // user clicked the record button and started recording
-                                    player_face.on('error', function(element, error) {
-                                        console.error(error);
-                                    });
-
-                                    player_face.on('finishRecord', function() {
-                                        blobs.face = player_face.recordedData;
-                                    });
-
-                                }, 1000);
+                                setTimeout(recordUserFace, 500);
                             }
 
                             setTimeout(function() {
@@ -396,24 +571,28 @@
                                 if (instance == 'screen') {
                                     instance = screen_only;
                                     $('.video_selector').attr('hidden', true);
+                                    $('.self_checkbox').removeAttr('hidden');
                                 }
+
                                 let prev = instance;
                                 if (instance == 'video') {
                                     instance = video;
                                     $('.video_selector').removeAttr('hidden');
+                                    $('.self_checkbox').attr('hidden', true);
                                 }
 
                                 setTimeout(function() {
+
                                     function init_top(selector) {
                                         let parent = document.querySelector(
                                             `.${selector} select`);
                                         if (parent && parent.value == '') {
-                                            let audio = parent.querySelector(
+                                            let element = parent.querySelector(
                                                 ' option:nth-child(2)');
-                                            if (audio) {
-                                                audio.selected = true;
-                                                $(audio).trigger('change');
-                                                audio.dispatchEvent(new Event('change'));
+                                            if (element) {
+                                                element.selected = true;
+                                                $(element).trigger('change');
+                                                element.dispatchEvent(new Event('change'));
                                             }
                                         }
                                     }
@@ -432,7 +611,6 @@
                                     $('.start_recording').show();
                                 });
 
-                                // hide record button
                                 player.ready(function() {
                                     // $('.vjs-control-bar .vjs-record-button')
                                     //     .hide();
@@ -461,35 +639,43 @@
                                     console.error(error);
                                 });
 
+                                player.on('play', function(element, error) {
+                                    if (player_face && recordWithFace) {
+                                        player_face.player_.play()
+                                    }
+                                });
+
+                                player.on('pause', function(element, error) {
+                                    if (player_face && recordWithFace) {
+                                        player_face.player_.pause()
+                                    }
+                                });
+
+                                player.on('stop', function(element, error) {
+                                    if (player_face && recordWithFace) {
+                                        player_face.player_.stop()
+                                    }
+                                });
+
                                 // user clicked the record button and started recording
 
                                 player.on('startRecord', function() {
                                     $('.stop_recording, .pause_recording').show();
-                                    $('.start_recording').hide();
-                                    $('.save_recording_btn').hide();
+                                    // $('.start_recording').hide();
+                                    // $('.save_recording_btn').hide();
                                     $('.selection_dropdown').hide();
 
-                                    if (player_face) {
-                                        var videoDeviceId = $('#video-select').val();
-
-                                        $('.vjs-icon-video-perm')
-                                            .trigger('click');
-                                        // // console.log(videoDeviceId);
-                                        if (videoDeviceId != '') {
-                                            player_face.record().setVideoInput(videoDeviceId);
-
-                                        }
+                                    if (player_face && recordWithFace) {
                                         setTimeout(function() {
                                             player_face.record().start();
-                                            setTimeout(function() {
-                                                //player_face.exitPictureInPicture()
-                                                player_face
-                                                    .requestPictureInPicture();
-                                                // $('.vjs-icon-picture-in-picture-start')
-                                                //     .trigger(
-                                                //         'click');
-                                            }, 500);
-                                        }, 1000);
+                                            // setTimeout(function() {
+                                            //     //player_face.exitPictureInPicture()
+
+                                            //     // $('.vjs-icon-picture-in-picture-start')
+                                            //     //     .trigger(
+                                            //     //         'click');
+                                            // }, 500);
+                                        }, 500);
                                     }
 
                                     setTimeout(function() {
@@ -500,6 +686,7 @@
                                     if ($('.custom_play').length == 0) {
                                         var myButton = player.controlBar.addChild('button', {},
                                             0);
+                                        // console.log(myButton);
                                         var myButtonDom = myButton.el();
                                         myButtonDom.classList.add('custom',
                                             'custom_play',
@@ -539,16 +726,15 @@
                                 // user completed recording and stream is available
                                 player.on('finishRecord', function() {
                                     hideControls(true);
+
                                     $('.selection_dropdown').show();
+
                                     setTimeout(function() {
                                         $('.vjs-icon-photo-camera').addClass(
                                             'vjs-hidden');
                                     }, 500);
 
-                                    if (player_face) {
-                                        if (player_face.pictureInPictureElement !== null) {
-                                            player_face.exitPictureInPicture();
-                                        }
+                                    if (player_face && recordWithFace) {
                                         player_face.record().stop();
                                     }
 
@@ -558,193 +744,147 @@
                                         .hide();
                                     $('.custom.vjs-icon-pause').remove();
 
+                                    let poster = [];
+
                                     // capturing the first frame of the stream
                                     captureFirstFrame(document.querySelector(
                                         '#my-video #my-video_html5_api')).then(t => {
                                         video_recorder.poster = t;
                                     });
 
+                                    if (recordWithFace && player_face) {
+                                        // captureAndCombineFrames('#my-video #my-video_html5_api',
+                                        //     '#my-video-face #my-video_html5_api');
+
+                                        // captureAndCombineFrames('#my-video #my-video_html5_api',
+                                        //         '#my-video-face #my-video-face_html5_api')
+                                        //     .then(combinedBlob => {
+                                        //         // Use the combinedBlob as needed (e.g., display or download)
+                                        //         const img = document.createElement('img');
+                                        //         img.src = URL.createObjectURL(combinedBlob);
+                                        //         video_recorder.poster = img;
+                                        //         document.body.appendChild(img);
+                                        //     })
+                                        //     .catch(error => {
+                                        //         console.error('Error:', error);
+                                        //     });
+                                        // captureFirstFrame(document.querySelector(
+                                        //         '#my-video-face #my-video-face_html5_api'))
+                                        //     .then(t => {
+                                        //         poster[1] = t;
+                                        //     });
+
+                                        // console.log(" poseter => " + poster);
+                                        // let combined = combineImages(poster[0], poster[1]);
+                                        // console.log("combined => " + combined)
+
+                                        // combined.then(t => {
+                                        //     video_recorder.poster = t;
+                                        // });
+
+                                        // captureFirstFrame(document.querySelector(
+                                        //         '#my-video-face #my-video-face_html5_api'))
+                                        //     .then(t => {
+                                        //         video_recorder.face_poster = t;
+                                        //     });
+                                    }
+
                                     blobs.screen = player.recordedData;
-                                    // if (instance == 'screen') {
-                                    blobs.face = player_face.recordedData;
+                                    // if (prev == 'screen') {
+                                    //     setTimeout(function() {
+                                    //         // blobs.face = player_face.recordedData;
+
+                                    //         // loadingStart('Merging...');
+                                    //         // console.log(blobs);
+
+                                    //         // var player_video_el =
+                                    //         //     createVideoElementFromBlob(player
+                                    //         //         .recordedData,
+                                    //         //         'player');
+
+                                    //         // if (recordWithFace) {
+                                    //         //     var player_face_video_el =
+                                    //         //         createVideoElementFromBlob(
+                                    //         //             player_face
+                                    //         //             .recordedData,
+                                    //         //             'player_face');
+                                    //         // }
+
+
+                                    //         // console.log(player_video_el,
+                                    //         //     player_face_video_el,
+                                    //         //     player_video_el.id,
+                                    //         //     player_face_video_el.id);
+
+                                    //         // mergeing 2 elemtns media
+                                    //         // var merge_data = mergeVideos(
+                                    //         //     player_video_el,
+                                    //         //     player_face_video_el);
+
+                                    //         // console.log(merge_data.result);
+                                    //         // downloadMediaStream(merge_data.result)
+                                    //         // saving blob to database using this
+                                    //         loadingStop();
+                                    //         // set the video blob to the video recorder4
+                                    //         // creating video elements from blobs
+                                    //     }, 1500);
+                                    // }
                                     setTimeout(function() {
-                                        blobs.face = player_face.recordedData;
-
-                                        if (blobs.face != '' || blobs.face != null) {
-                                            loadingStart('Merging...');
-                                            console.log(blobs);
-
-                                            var player_video_el =
-                                                createVideoElementFromBlob(player
-                                                    .recordedData,
-                                                    'player');
-                                            var player_face_video_el =
-                                                createVideoElementFromBlob(player_face
-                                                    .recordedData,
-                                                    'player_face');
-
-
-                                            console.log(player_video_el,
-                                                player_face_video_el,
-                                                player_video_el.id,
-                                                player_face_video_el.id);
-
-                                            // mergeing 2 elemtns media
-                                            var merge_data = mergeVideos(
-                                                player_video_el,
-                                                player_face_video_el);
-
-                                            console.log(merge_data.result);
-                                            downloadMediaStream(merge_data.result)
-                                            // saving blob to database using this
-                                            loadingStop();
-                                        }
-
-                                        // set the video blob to the video recorder4
                                         video_recorder.video = player.recordedData;
-
-                                        // creating video elements from blobs
-                                    }, 1500);
+                                        if (recordWithFace && player_face) {
+                                            video_recorder.face = player_face
+                                                .recordedData ?? null;
+                                        }
+                                    }, 500);
                                 });
-
                                 if (!player.record) {
                                     console.error('Recording plugin is not available.');
                                     return false;
                                 }
                             }, 1000);
-
                         })
                         .catch(function(err) {
                             // console.log('Error enumerating devices: ' + err);
                         });
-
                 } catch (error) {
                     // console.log('Error enumerating devices: ' + error);
                 }
             }
 
-            function createVideoElementFromBlob(blobData, id, display = false) {
-                const blob = new Blob([blobData], {
-                    type: 'video/mp4'
+            function combineImages(imageSrc1, imageSrc2) {
+                return new Promise((resolve, reject) => {
+                    // Create two image objects
+                    const img1 = new Image();
+                    const img2 = new Image();
+
+                    // Load the first image
+                    img1.onload = function() {
+                        // Load the second image
+                        img2.onload = function() {
+                            // Create a canvas element
+                            const canvas = document.createElement('canvas');
+                            const ctx = canvas.getContext('2d');
+
+                            // Set canvas dimensions to accommodate both images
+                            canvas.width = Math.max(img1.width, img2.width);
+                            canvas.height = img1.height + img2.height;
+
+                            // Draw the first image onto the canvas
+                            ctx.drawImage(img1, 0, 0);
+
+                            // Draw the second image on top of the first one
+                            ctx.drawImage(img2, 0, img1.height);
+
+                            // Convert canvas content to a blob
+                            canvas.toBlob(blob => {
+                                resolve(blob);
+                            }, 'image/png');
+                        };
+                        img2.src = imageSrc2;
+                    };
+                    img1.src = imageSrc1;
                 });
-                const videoElement = document.createElement('video');
-                videoElement.src = URL.createObjectURL(blob);
-                videoElement.setAttribute('id', id);
-                videoElement.setAttribute('autoplay', false);
-                videoElement.setAttribute('controls', false);
-                if (!display) {
-                    videoElement.style.display = 'block';
-                } else {
-                    videoElement.style.display = 'none';
-                }
-                document.body.appendChild(videoElement); // Append to the document body or another container
-                return videoElement;
             }
-
-            function downloadBlob(blob) {
-                // Create a blob URL from the blob object
-                var blobUrl = URL.createObjectURL(blob);
-
-                // Create a temporary link element
-                var link = document.createElement('a');
-                link.href = blobUrl;
-
-                // Generate a unique filename based on the current timestamp
-                var fileName = 'merged_' + Date.now() + '.mp4';
-                link.download = fileName; // Set the filename for download
-
-                // Append the link to the body
-                document.body.appendChild(link);
-
-                // Programmatically click the link to trigger the download
-                link.click();
-
-                // Cleanup
-                URL.revokeObjectURL(blobUrl);
-                document.body.removeChild(link);
-            }
-
-            function downloadMediaStream(mediaStream) {
-                // Create a new MediaRecorder
-                const mediaRecorder = new MediaRecorder(mediaStream);
-                const recordedChunks = [];
-
-                // Listen to dataavailable event
-                mediaRecorder.addEventListener('dataavailable', function(event) {
-                    recordedChunks.push(event.data);
-                });
-
-                // When recording is stopped, create a Blob and initiate download
-                mediaRecorder.addEventListener('stop', function() {
-                    const blob = new Blob(recordedChunks, {
-                        type: 'video/webm'
-                    });
-                    downloadBlob(blob);
-                });
-
-                // Start recording
-                mediaRecorder.start();
-
-                // Stop recording after a certain duration (adjust the duration as needed)
-                setTimeout(() => {
-                    mediaRecorder.stop();
-                }, 5000); // Stop after 5 seconds, for example
-            }
-
-
-
-            function mergeVideos(videoElement1, videoElement2) {
-
-                const merger = new VideoStreamMerger();
-
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                canvas.width = videoElement1.videoWidth + videoElement2.videoWidth;
-                canvas.height = Math.max(videoElement1.videoHeight, videoElement2.videoHeight);
-
-                const mergedVideoElement = document.createElement('video');
-                mergedVideoElement.setAttribute('playsinline', '');
-                mergedVideoElement.setAttribute('class', 'video-js vjs-default-skin mt-4 h-full w-100');
-
-                merger.result = mergedVideoElement.captureStream();
-
-                // Add the first video element to merger
-                merger.addMediaElement(videoElement1.id, videoElement1, {
-                    x: 0,
-                    y: 0,
-                    width: videoElement1.videoWidth,
-                    height: videoElement1.videoHeight,
-                    mute: false // You can set this to true if needed
-                });
-
-                // Add the second video element to merger
-                merger.addMediaElement(videoElement2.id, videoElement2, {
-                    x: videoElement1.videoWidth, // Position it next to the first video
-                    y: 0,
-                    width: videoElement2.videoWidth,
-                    height: videoElement2.videoHeight,
-                    mute: false // You can set this to true if needed
-                });
-
-                // Render the merged stream to the canvas
-                merger.start();
-                merger.canvas = canvas;
-                merger.ctx = ctx;
-
-                // Draw the merged stream to the canvas
-                function drawCanvas() {
-                    ctx.drawImage(videoElement1, 0, 0, videoElement1.videoWidth, videoElement1.videoHeight);
-                    ctx.drawImage(videoElement2, videoElement1.videoWidth, 0, videoElement2.videoWidth,
-                        videoElement2.videoHeight);
-                    requestAnimationFrame(drawCanvas);
-                }
-
-                // Start drawing the canvas
-                drawCanvas();
-
-                return merger;
-            }
-
 
 
             // function mergeScreen() {
@@ -762,7 +902,6 @@
             //             index: 1
             //         });
             //         composite.start();
-
             //         // console.log(composite);
             //         document.querySelector('#my-final-source').srcObject = composite.result;
             //         return composite;
@@ -770,74 +909,14 @@
             //     loadingStop();
             // }
 
-            function saveRecording(video_recorder) {
-                let formData = new FormData();
-                formData.append('status', video_recorder.status);
-                formData.append('poster', video_recorder.poster);
-                formData.append('video', video_recorder.video);
-                formData.append('posterUrl', video_recorder.posterUrl);
-                formData.append('videoUrl', video_recorder.videoUrl);
-                formData.append('_token', "{{ csrf_token() }}");
-
-                fetch("{{ route('recordings.store') }}", {
-                        method: "POST",
-                        body: formData,
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        // // console.log(data);
-                        if (data.success) {
-                            Swal.fire({
-                                icon: 'success',
-                                title: 'Success',
-                                text: data.message,
-                                showConfirmButton: false,
-                                timer: 2000
-                            });
-                            location.reload();
-                        } else {
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'Oops...',
-                                text: data.message,
-                            });
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        Swal.close();
-                    });
-            }
-
-            $('.save_video').click(async function(e) {
-                e.preventDefault();
-                // // console.log('saving video');
-                loadingStart('Saving...');
-
-                // // console.log(video_recorder);
-
-                let status = $(this).data('status');
-                video_recorder.status = status;
-
-                const fetchFormData = async (formData) => {
-                    const data = await sendFormData(formData);
-                    if (data?.formData && data?.field_id) {
-                        // // console.log(data.formData);
-                        const field = data.formData[data.field_id];
-                        const values = Object.values(field);
-                        if (values.length > 0) {
-                            // console.log(values[0].url);
-                            return values[0].url;
-                        }
-                    }
-                    return null;
-                };
-
-                video_recorder.posterUrl = await fetchFormData(video_recorder.poster);
-                video_recorder.videoUrl = await fetchFormData(video_recorder.video);
-
-                saveRecording(video_recorder);
-                loadingStop();
+            $('input[name="show_face"]').change(function() {
+                if ($(this).is(':checked')) {
+                    $('#my-video-face').show();
+                    recordWithFace = true;
+                } else {
+                    $('#my-video-face').hide();
+                    recordWithFace = false;
+                }
             });
 
             $('input[name="share"]').change(function() {
@@ -931,499 +1010,53 @@
 
             });
 
-            $('#video-select').change(function(e) {
+            $('.save_video').click(async function(e) {
                 e.preventDefault();
-                player.record().setVideoInput($(this).val() ?? '');
-            });
+                // // console.log('saving video');
+                loadingStart('Saving...');
 
-            $('#audio-select').change(function(e) {
-                e.preventDefault();
-                player.record().setAudioInput($(this).val() ?? '');
-            });
+                // // console.log(video_recorder);
 
-            $('.start_recording').click(function(e) {
-                e.preventDefault();
-                hideControls(true);
+                let status = $(this).data('status');
+                video_recorder.status = status;
 
-                $('#video-select, #audio-select').prop('disabled',
-                    'disabled'); // Disable the video select dropdown
-                player.record().start();
-            });
-
-            $('.pause_recording').click(function(e) {
-                e.preventDefault();
-                hideControls(true);
-                $('.stop_recording, .resume_recording').show();
-                player.record().pause();
-            });
-
-            $('.resume_recording').click(function(e) {
-                e.preventDefault();
-                hideControls(true);
-                $('.stop_recording, .pause_recording').show();
-                player.record().resume();
-            });
-
-            $('.stop_recording').click(function(e) {
-                e.preventDefault();
-                hideControls(true);
-                $('.start_recording').show();
-                player.record().stop();
-            });
-
-            $('.restart_recording').click(function(e) {
-                e.preventDefault();
-                hideControls(true);
-                $('.start_recording').show();
-                $('.save_video, .restart_recording, .save_recording_btn').hide();
-                player.record().start();
-            });
-
-            $('#submitData').click(async function(e) {
-                e.preventDefault();
-
-                // $(this).attr('disabled', 'disabled');
-
-                try {
-                    let tabactive = $('#sms-tab').hasClass('active') ? 'SMS' : 'Email';
-                    let body = '';
-                    let bodykey = '.sms-summernote';
-                    if (tabactive == 'Email') {
-                        bodykey = '.email-summernote';
-                        body = $(bodykey).summernote('code');
-                    } else {
-                        body = $($(bodykey).summernote('code')).text();
+                const fetchFormData = async (formData) => {
+                    const data = await sendFormData(formData);
+                    if (data?.formData && data?.field_id) {
+                        // // console.log(data.formData);
+                        const field = data.formData[data.field_id];
+                        const values = Object.values(field);
+                        if (values.length > 0) {
+                            // console.log(values[0].url);
+                            return values[0].url;
+                        }
                     }
+                    return null;
+                };
 
-                    let defChunks = 'chunks';
-                    let action = $('[name="process1"]:checked').val();
-                    // $(this).data('action') ?? 'direct';
-                    // // console.log(action);
-                    let share = $('[name="share"]:checked').val();
-                    let contacts = $('#contact-select').val();
-                    let tags = $('#tag-select').val();
-                    if (contacts.length == 0 && share == 'contacts') {
-                        show_error('Please select at least one contact');
-                        return;
-                    } else if (tags.length == 0 && share == 'tags') {
-                        show_error('Please select at least one tag');
-                        return;
-                    }
+                video_recorder.posterUrl = await fetchFormData(video_recorder.poster);
+                video_recorder.videoUrl = await fetchFormData(video_recorder.video);
+                if (recordWithFace && player_face) {
+                    video_recorder.face = await fetchFormData(video_recorder.face);
+                    video_recorder.face_poster = await fetchFormData(video_recorder.face_poster);
 
-                    if (body == '' || body == '<p></p>' || body == '<p><br></p>') {
-                        show_error('Please enter content to send');
-                        return;
-                    }
-
-                    loadingStart('Processing...');
-
-                    let contactChunks = [];
-                    let formData = new FormData();
-                    if (action == defChunks) {
-                        contactChunks = chunkArray(contacts, 50);
-                    } else {
-                        formData.append('contacts', contacts);
-                    }
-
-                    formData.append('tags', tags);
-                    formData.append('body', body);
-                    formData.append('subject', $('#subject').val());
-                    formData.append('share', share);
-                    formData.append('type', tabactive);
-                    formData.append('recording_id', $('#recording_id').val());
-                    formData.append('_token', "{{ csrf_token() }}");
-
-                    const formDataObject = {};
-                    formData.forEach((value, key) => {
-                        formDataObject[key] = value;
-                    });
-                    // // console.log(contactChunks);
-                    console.time();
-                    if (action == defChunks) {
-
-                        let worker = new Worker('./js/chunksWorker.js');
-
-                        worker.postMessage({
-                            chunks: contactChunks,
-                            data: {
-                                start: 0,
-                                end: contactChunks.length,
-                                // callback: processData,
-                                formDataObject: formDataObject,
-                                url: "{{ route('ghl.sendData') }}",
-                                contacts: "{{ route('ghl.contacts') }}"
-                            }
-                        });
-
-                        worker.onmessage = function(e) {
-                            let data = e.data;
-                            if (data.status == 'progress') {
-                                data.contact = (data.start * 50) + (data.index + 1);
-                                let message = `Sharing with - Contact ${data.contact}`;
-                                if (data.tag != '') {
-                                    message += `- Tag ${data.tag}`;
-                                }
-                                loadingStart(
-                                    message
-                                );
-                            } else {
-                                $('#contact-select').val('').trigger('change');
-                                $('#tag-select').val('').trigger('change');
-                                $('#subject').val('');
-                                $(bodykey).summernote('code', '');
-                                $('#share-modal .close.btn.btn-danger').trigger('click');
-                                console.timeEnd();
-                                loadingStop();
-                            }
-                        };
-                        loadingStop();
-                    } else {
-                        processDataShare(formData).then(x => {
-                            console.timeEnd();
-                            loadingStop();
-                            // // console.log(x);
-                        }).catch(t => {
-                            // // console.log(t);
-                            loadingStop();
-                        });
-                    }
-                } catch (error) {
-                    // // console.log(error);
-                    loadingStop();
                 }
-            });
 
-            $("#contact-select").select2({
-                ajax: {
-                    url: "{{ route('ghl.contacts') }}",
-                    dataType: 'json',
-                    delay: 250,
-                    data: function(params) {
-                        return {
-                            q: params.term,
-                            page: params.page
-                        };
-                    },
-                    processResults: function(data, params) {
-                        params.page = params.page || 1;
-                        return data;
-                    },
-                    cache: true
-                },
-                placeholder: $("#contact-select").attr('placeholder'),
-                allowClear: true,
-                dropdownParent: $('#share-modal'),
-                closeOnSelect: false,
-                width: "100%",
 
-            });
-
-            $("#recording-modal").on("hidden.bs.modal", function() {
-                // console.log(player);
-                // if (player) {
-                //     player.dispose();
-                // }
-                // console.log('recording modal closed');
+                saveRecording(video_recorder);
+                loadingStop();
             });
             loadingStop();
         });
 
-        fetchData(1);
-        getTags();
 
-        function getTags() {
-            $.ajax({
-                type: "GET",
-                url: "{{ route('ghl.tags') }}",
-                success: function(response) {
-                    if (response.success == true) {
-                        // // console.log(response.data);
-                        $('.tag-select').empty();
-                        let html = '';;
-                        $('.tag-select').html(
-                            response?.data.map(element => {
-                                if (element.name.trim() == '') {
-                                    return '';
-                                }
-                                return `<option value="${element.name}">${element.name}</option>`;
-                            }).join(''));
-
-                        $('#tag-select').trigger('change');
-                    }
-                    initializeSelect2('#tag-select', '.tag_selector');
-                }
-            });
-        }
-
-        function processDataShare(formData) {
-
-            return new Promise((resolve, reject) => {
-                //$('#contact-select').val()
-                $.ajax({
-                    type: "POST",
-                    url: "{{ route('ghl.sendData') }}",
-                    data: formData,
-                    // dataType: "dataType",
-                    processData: false,
-                    contentType: false,
-                    success: function(response) {
-
-                        resolve(response);
-                    },
-                    error: function(error) {
-
-                        reject(error);
-                    }
-                });
-            });
-        }
-
-        function fetchData(page = 1) {
-            $.ajax({
-                url: "{{ route('recording.data') }}",
-                method: 'GET',
-                data: {
-                    page: page
-                },
-                success: function(response) {
-                    if (response.data.data.length === 0 && page == 1) {
-                        $('#recordings-container').html(
-                            `<h3 class="card-title fw-semibold text-center no_recording">No recording available!</h3>`
-                        );
-                    } else {
-                        renderData(response.data.data);
-                        renderPagination(response.data);
-                    }
-                }
-            });
-        }
-
-        function renderData(recordings) {
-            var html = '';
-            $.each(recordings, function(index, recording) {
-                let title = recording?.title_dt; //${formatTimestamp(recording.title, 'M d, Y')};
-                let enc_id = recording.enc_id;
-                let linkurl = `{{ route('recordings.show', 'link') }}`.replaceAll('link', enc_id);
-                let deleteurl = `{{ route('recordings.destroy', 'link') }}`.replaceAll('link', recording.enc_id);
-                // // console.log(deleteurl);
-                html +=
-                    `
-                <div class="col-lg-3 col-md-4 col-sm-6 mb-4 d-flex align-items-stretch">
-                        <div class="card">
-                            <div class="header" style="max-height: 200px; overflow: hidden;">
-                                <a href="${recording.short_url}" target="_blank">
-                                    <img src="${recording.poster_url || 'https://via.placeholder.com/600x400'}" alt="${title}" class="card-img-top" style="width: 100%; height: auto;">
-                                </a>
-                            </div>
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <h5 class="card-title">${title}</h5>
-                                    <div class="dropdown">
-                                        <a href="javascript:void(0)" role="button" id="action-buttons" data-toggle="dropdown" aria-expanded="false" data-bs-toggle="actions">
-                                            <i class="fas fa-ellipsis-h"></i>
-                                        </a>
-                                        <div class="dropdown-menu" aria-labelledby="action-buttons">
-                                            <a class="dropdown-item" href="javascript:void(0)" data-toggle="modal" data-target="#edit-recording-modal" data-title="${title}" data-description="${recording.description}" data-url="${linkurl}">Edit</a>
-                                            <a class="dropdown-item copy-link" href="javascript:void(0)" data-bs-toggle="tooltip" data-link="${recording.short_url ??  recording.file_url}" title="Copy link" onclick="copyLink(this)">Copy</a>
-                                            <a class="dropdown-item" href="javascript:void(0)" data-bs-toggle="tooltip" title="Delete Record" onclick='deleteRecordAjax("${deleteurl}")'>Delete</a>
-                                        </div>
-                                    </div>
-                                </div>
-                                <p class="card-text">${recording.description}</p>
-                                <div class="d-flex justify-content-between">
-                                    <button class="btn btn-danger share" data-bs-toggle="tooltip" data-value="${recording.id}" data-toggle="modal" data-target="#share-modal" data-title="${title}" data-text="${recording.short_url ?? recording.file_url}" data-short="${recording.short_url ?? linkurl}">
-                                        <i class="fa fa-share"></i> Share
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-
-            });
-            $('#recordings-container').html(html);
-        }
-
-        function processChunks(chunks, data) {
-            return new Promise((resolve, reject) => {
-                let processNextChunk = (index) => {
-                    if (index >= chunks.length) {
-
-                        resolve(chunks);
-                        return;
-                    }
-
-                    let chunk = chunks[index];
-                    let promises = chunk.map((element, ind) => {
-                        data.formData.set('contacts', element);
-                        return data.callback(data.formData, ind).then(x => {
-                            chunks[index][ind].response = x;
-                        }).catch(error => {
-                            let errorMessage = error.responseJSON.message;
-                            $('.alert-message').html(errorMessage).show();
-                        });
-                    });
-
-                    Promise.all(promises).then(() => {
-                        setTimeout(() => {
-                            processNextChunk(index + 1);
-                        }, 2000);
-                    });
-                };
-
-                processNextChunk(data.start ?? 0);
-            });
-        }
-
-        function processChunks1(chunks, data) {
-            let start = data.start;
-            // console.log(chunks.length, start);
-            if (start >= chunks.length) {
-
-                if (typeof data.finalize == 'function') {
-                    //data.finalize(chunks);
-                }
-                // console.log('done', chunks);
-                loadingStop();
-                return chunks;
-            }
-            let chunk = chunks[start] ?? [];
-            chunk.forEach((element, ind) => {
-                // console.log(element);
-                data.formData.set('contacts', element);
-                // console.log(data.formData);
-                try {
-                    $.ajax({
-                        type: "POST",
-                        url: "{{ route('ghl.sendData') }}",
-                        data: data.formData,
-                        // dataType: "dataType",
-                        processData: false,
-                        contentType: false,
-                        success: function(response) {
-                            // console.log(response);
-                            chunks[start][ind].response = response;
-                            // resolve(response);
-                        },
-                        error: function(error) {
-                            //reject(error);
-                        }
-                    });
-                } catch (error) {
-                    // console.log(error);
-                }
-
-                if (ind == chunk.length - 1) {
-                    data.start = data.start + 1;
-                    processChunks1(chunks, data);
-                }
-            });
-        }
-
-        function chunkArray(arr, chunkSize) {
-            const chunkedArrays = [];
-            for (let i = 0; i < arr.length; i += chunkSize) {
-                chunkedArrays.push(arr.slice(i, i + chunkSize));
-            }
-            return chunkedArrays;
-        }
-
-        function addDeviceToSelect(device, selectId, hideit = '') {
-            var parent = document.querySelector('.' + selectId);
-            var select = parent.querySelector('select');
-            var option = document.createElement('option');
-            option.value = device.deviceId;
-
-            let already = select.querySelector('option[value="' + device.deviceId + '"]');
-            if (!already) {
-                option.text = device.label || 'Device ' + (select.options.length + 1);
-                select.add(option);
-            }
-            try {
-                if (hideit == 'video') {
-                    select.querySelector('option[value=""]').setAttribute('hidden', "1")
-                } else {
-                    select.querySelector('option[value=""]').removeAttribute('hidden')
-                }
-            } catch (error) {
-
-            }
-            if (select.options.length > 1) {
-                parent.removeAttribute('hidden');
-            } else if (hideit == 'video') {
-                //close modal
-                show_error('No video device found');
-            }
-        }
-
-        var table = $('#table').DataTable({
-            processing: true,
-            serverSide: true,
-            responsive: true,
-            "order": [],
-            ajax: "{{ route('sharelog.data') }}",
-            columns: [{
-                    data: 'DT_RowIndex',
-                    // data: 'id',
-                    name: 'id'
-                },
-                @foreach ($tableFields as $key => $value)
-                    {
-                        data: '{{ $key }}',
-                        name: '{{ $key }}',
-                        @if ($key === 'action' || $key === 'Action')
-                            searchable: false,
-                            orderable: false
-                        @endif
-                    },
-                @endforeach
-            ]
+        $("#recording-modal").on("hidden.bs.modal", function() {
+            // console.log(player);
+            // if (player) {
+            //     player.dispose();
+            // }
+            // console.log('recording modal closed');
         });
-
-        $('body').on('click', '#history-tab', function(e) {
-            e.preventDefault();
-            table.ajax.reload();
-        });
-
-        function deleteRecordAjax(url) {
-            return new swal({
-                title: 'Are you sure?',
-                text: 'You will not be able to recover this record!',
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#d33',
-                cancelButtonColor: '#3085d6',
-                confirmButtonText: 'Yes, delete it!'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    $.ajax({
-                        type: 'DELETE',
-                        url: url,
-                        data: {
-                            _token: "{{ csrf_token() }}"
-                        },
-                        success: function(data) {
-                            if (data.success == true) {
-                                toastr.success(data.message);
-                                setTimeout(() => {
-                                    location.reload();
-                                }, 1000);
-                            } else {
-                                toastr.error('Error Occured while deleteing record!');
-                            }
-                        },
-                        error: function(error) {
-                            let message = 'Network error';
-                            if (error.responseJSON) {
-                                message = error.responseJSON.message
-                            }
-                            // console.log(message);
-                            toastr.error('Error Occured while deleteing record!');
-                        }
-                    });
-                }
-            });
-        }
 
         function sendFormData(file) {
             let form_Id = "HlYGceKpcoDe2MWZxjDx";
@@ -1465,16 +1098,25 @@
                 },
                 sessionFingerprint: "157acabf-8e5e-4a59-8b9e-cf00e9515455"
             };
-            var form = new FormData();
-            form.append(custom_field_file, file, "map_image.png");
-            form.append("formData", JSON.stringify(formData));
-            var request = new XMLHttpRequest();
-            request.open(
-                "POST",
-                "https://services.leadconnectorhq.com/forms/submit",
-                true
-            );
+            let ext = false;
+            try {
+                var form = new FormData();
+                form.append(custom_field_file, file, "map_image.png");
+                form.append("formData", JSON.stringify(formData));
+            } catch (error) {
+                ext = true;
+            }
+
             return new Promise((resolve, reject) => {
+                if (ext) {
+                    resolve('');
+                }
+                var request = new XMLHttpRequest();
+                request.open(
+                    "POST",
+                    "https://services.leadconnectorhq.com/forms/submit",
+                    true
+                );
                 request.onreadystatechange = function() {
                     if (this.readyState == 4 && [200, 201].includes(this.status)) {
                         let data = request.responseText;
@@ -1488,5 +1130,13 @@
                 request.send(form);
             });
         }
+    </script>
+    @include('recording.processing')
+    @include('recording.events')
+    @include('recording.get-data')
+    @include('recording.datatable')
+    <script>
+        fetchData(1);
+        getTags();
     </script>
 @endsection

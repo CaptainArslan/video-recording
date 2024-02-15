@@ -15,12 +15,7 @@
                 Your browser does not support the video tag.
             </video>
         </div>
-        {{-- <div class="card-footer">
-            <p class="text"> {{ $recording->description }} </p>
-            <b>Total visit: ({{ $visits }})</b>
-        </div> --}}
     </div>
-
 @endsection
 @section('js')
 

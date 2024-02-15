@@ -72,4 +72,6 @@ Route::middleware(['auto_auth', 'is_company'])->group(function () {
     Route::get('contact/get-data', [ShareLogController::class, 'index'])->name('sharelog.data');
 });
 
-//
+Route::get('video/{id}', [RecordingController::class, 'showRecord'])->name('record.data');
+
+Route::get('/merge', [RecordingController::class, 'mergeVideos'])->name('recording.merge');

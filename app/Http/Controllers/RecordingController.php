@@ -6,11 +6,12 @@ use App\Models\User;
 use App\Models\Recording;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use AshAllenDesign\ShortURL\Classes\Builder;
 use AshAllenDesign\ShortURL\Models\ShortURL;
-use Illuminate\Support\Facades\Log;
+
 
 class RecordingController extends Controller
 {
@@ -88,10 +89,10 @@ class RecordingController extends Controller
         $recording->fill([
             'user_id' => $user->id,
             'title' => Carbon::now()->format('Y-m-d H:i:s'),
-            'description' => generateRandomQuote(),
-            'file' => $request->video,
+            'description' => $request->description ?? null,
+            // 'file' =>  $request->video,
             'file_url' => $request->videoUrl,
-            'poster' => $request->poster,
+            // 'poster' => $request->poster,
             'poster_url' => $request->posterUrl,
             'status' => $request->status,
             'duration' => $request->duration,
@@ -137,11 +138,20 @@ class RecordingController extends Controller
     public function getData()
     {
         $user = Auth::user();
+        $limit = $user->plan->limit ?? 0;
+
+
+        if ($limit == 0) {
+            $limit = 'Unlimited';
+        }
         $recordings = Recording::where('user_id', $user->id)->latest()->paginate(getPaginate());
 
         return response()->json([
             'success' => true,
-            'data' => $recordings
+            'data' => $recordings,
+            'user' => [
+                'limit' => $limit,
+            ]
         ]);
     }
 
@@ -200,15 +210,13 @@ class RecordingController extends Controller
 
     public function showRecord($id)
     {
-        // $shortURL = ShortURL::findByKey($id);
-
-        // if (empty($shortURL)) {
-        //     abort(404);
-        // }
-        $url = 'https://ryanvideo.jdftest.xyz/video/' . $id;
-
+        $url = env('APP_URL') . '/' . config('short-url.prefix') . '/' . $id;
         $recording = Recording::where('short_url',  $url)->firstOrFail();
-        // $visits = $shortURL->visits->count();
-        return view('recording.show', get_defined_vars());
+
+        if (!auth()->user() && $recording->status == 'draft') {
+            return abort(404, 'You are not allowed to see this recording');
+        }
+
+        return view('recording.show', compact('recording'));
     }
 }
