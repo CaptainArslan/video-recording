@@ -1,194 +1,264 @@
 @extends('layouts.app')
-@section('title', 'Settings')
+@section('title', 'Recordings')
+@section('css')
+    <link href="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.css" rel="stylesheet">
+    <style>
+        [aria-label="Video"],
+        [aria-label="Help"] {
+            display: none !important;
+        }
+
+        .iframe #main-wrapper[data-layout=vertical][data-sidebartype=full] .body-wrapper {
+            margin-left: 0px !important;
+        }
+
+        .iframe .body-wrapper>.container-fluid {
+            max-width: 100% !important;
+        }
+
+        .iframe #main-wrapper[data-layout=vertical][data-header-position=fixed] .body-wrapper>.container-fluid {
+            padding-top: 0px !important;
+        }
+
+        .ifrmae .dropdown-toggle::after {
+            display: none !important;
+        }
+
+        .custom_vd_btn::before {
+            font-size: 2em;
+            line-height: 1.4em;
+        }
+
+
+        #my-video {
+            min-height: 300px !important;
+        }
+
+        div#my-video-face :not(video) {
+            display: none;
+        }
+
+        div#my-video-face video,
+        div#my-video-face {
+            width: 200px !important;
+            height: 200px !important;
+        }
+
+        div#my-video-face {
+            position: absolute;
+            z-index: 9999999;
+            bottom: 11%;
+            left: 4%;
+        }
+
+        canvas#audioCanvas {
+
+            height: 30px;
+        }
+
+        div#my-video-face.hide {
+            display: none;
+        }
+    </style>
+@endsection
 @section('section')
     <div class="card shadow-none">
         <div class="card-body d-flex align-items-center justify-content-between">
-            <h3 class="card-title fw-semibold">{{ $title }} ({{ $user->recordings->count() }} / 25)</h3>
-            <!-- <a href="#" class="btn btn-primary"> New Video </a> -->
+
+            @php
+                $limit = $user->plan->limit ?? 0;
+                $recordMore = true;
+                $recCount = $user->recordings->count();
+                if ($limit == 0) {
+                    $limit = 'Unlimited';
+                } elseif ($recCount >= $limit) {
+                    $recordMore = false;
+                }
+
+            @endphp
+            <h3 class="card-title fw-semibold">{{ $title }} (<span id="user_rec">{{ $recCount }}</span> / <span
+                    id="user_limit">{{ $limit }}</span>)
+            </h3>
+            <!-- <a href="javascript:void(0)" class="btn btn-primary"> New Video </a> -->
             <div class="dropdown">
-                <button class="btn btn-primary dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown"
-                    aria-haspopup="true" aria-expanded="false">
-                    New Video
-                </button>
-                <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-                    <button class="dropdown-item text-dark" href="#" type="button" class="btn btn-primary"
-                        data-value="video" data-toggle="modal" data-target="#recording-modal"> <i class="fa fa-video-camera"
-                            aria-hidden="true"></i> &nbsp;&nbsp; Record a Video</button>
-                    <button class="dropdown-item text-dark" href="#" type="button" class="btn btn-primary"
-                        data-value="screen" data-toggle="modal" data-target="#recording-modal"> <i
-                            class="fa fa-video-camera" aria-hidden="true"></i> &nbsp;&nbsp; Record a Screen</button>
-                </div>
+                @if ($recordMore)
+                    <button class="btn btn-primary dropdown-toggle" type="button" id="dropdownMenuButton"
+                        data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        New Video
+                    </button>
+
+                    <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                        <button class="dropdown-item text-dark" href="javascrip:void(0)" type="button" data-value="video"
+                            data-toggle="modal" data-target="#recording-modal">
+                            <i class="fa fa-video-camera" aria-hidden="true"></i> &nbsp;&nbsp; Record a Video</button>
+
+                        <button class="dropdown-item share_recording text-dark" href="javascrip:void(0)" type="button"
+                            data-value="screen" data-toggle="modal" data-target="#recording-modal">
+                            <i class="fa fa-video-camera" aria-hidden="true"></i> &nbsp;&nbsp; Record Screen</button>
+
+                        <a class="share_outside_recording dropdown-item text-dark" target="_blank"
+                            href="{{ route('recordings.index') }}?action=share"><i class="fa fa-video-camera"
+                                aria-hidden="true"></i> &nbsp;&nbsp; Record a Screen
+                        </a>
+
+                    </div>
+                @endif
             </div>
         </div>
     </div>
+
+    {{-- videos --}}
     <div class="container-fluid">
+
         <ul class="nav nav-tabs " id="myTab" role="tablist">
             <li class="nav-item">
                 <a class="nav-link" id="videos-tab" data-toggle="tab" href="#videos" role="tab" aria-controls="videos"
                     aria-selected="false">Videos</a>
             </li>
-            {{--
-        <li class="nav-item">
-            <a class="nav-link" id="archieve-tab" data-toggle="tab" href="#archieve" role="tab" aria-controls="archieve" aria-selected="false">Archieve</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" id="screenshots-tab" data-toggle="tab" href="#screenshots" role="tab" aria-controls="screenshots" aria-selected="false">Screenshots</a>
-        </li>
-        --}}
+            <li class="nav-item">
+                <a class="nav-link" id="history-tab" data-toggle="tab" href="#history" role="tab"
+                    aria-controls="history" aria-selected="false">History</a>
+            </li>
+
         </ul>
         <div class="tab-content mt-4" id="nav-tabContent">
             <div class="tab-pane fade show active" id="videos" role="tabpanel" aria-labelledby="videos-tab">
                 <h2 class="font-weight-bold">Videos</h2>
-                <div class="row mt-4">
-                    @if ($recordings->count() > 0)
-                        @foreach ($recordings as $recording)
-                            <div class="col-lg-4 col-md-4 col-sm-6 mb-4 d-flex align-items-stretch">
-                                <div class="card col-12">
-                                    <a href="{{ route('recordings.show', encrypt($recording->id)) }}">
-                                        <video playsinline class="card-img-top"
-                                            poster="{{ $recording->poster_url ?? 'https://via.placeholder.com/600x400' }}"
-                                            src="{{ $recording->video_url ?? 'https://via.placeholder.com/600x400' }}"
-                                            type="video/mp4">
-                                            <!-- Fallback image in case the video fails to load -->
-                                            <img src="{{ $recording->poster_url ?? 'https://via.placeholder.com/600x400' }}"
-                                                alt="{{ $recording->title }}">
-                                        </video>
-                                    </a>
-                                    <div class="card-body">
-                                        <div class="d-flex justify-content-between">
-                                            <h5 class="card-title">{{ $recording->title }}</h5>
-                                            <div class="dropdown d-inline-block ml-2">
-                                                <a href="#" class="dropdown-toggle" role="button" id="action-buttons"
-                                                    data-toggle="dropdown" aria-expanded="false" data-bs-toggle="actions">
-                                                    <i class="fas fa-ellipsis-h"></i>
-                                                </a>
-                                                <div class="dropdown-menu" aria-labelledby="action-buttons">
-                                                    <a class="dropdown-item" href="#">Edit</a>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <p class="card-text">{{ $recording->description }}.</p>
-                                        <div class="">
-                                            <button class="btn btn-danger" data-bs-toggle="tooltip"
-                                                data-url="{{ $recording->file }}" title="Share">
-                                                <i class="fa fa-user-plus" aria-hidden="true"></i>
-                                            </button>
-                                            <button class="btn btn-info copy-iframe" data-bs-toggle="tooltip"
-                                                data-link="{{ $recording->file_url }}" title="Copy link">
-                                                <i class="fa fa-code" aria-hidden="true"></i>
-                                            </button>
-                                            <button class="btn btn-secondary copy-link" data-bs-toggle="tooltip"
-                                                data-link="{{ $recording->file_url }}" title="Copy link">
-                                                <i class="fa fa-clone" aria-hidden="true"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        @endforeach
-                    @else
-                        <h3 class="card-title fw-semibold text-center">No data found!</h3>
-                    @endif
+                <div class=" mt-4">
+                    <div id="recordings-container" class="row"> </div>
+                    <div id="pagination-container" class="row"> </div>
                 </div>
-
-                <div class="paginator mb-5 d-flex justify-content-end">
-                    {{ $recordings->links() }}
-                </div>
-
             </div>
-            {{--
-        <div class="tab-pane fade" id="archieve" role="tabpanel" aria-labelledby="archieve-tab">
-            <h2 class="font-weight-bold">Archieve</h2>
-        </div>
-        <div class="tab-pane fade" id="screenshots" role="tabpanel" aria-labelledby="screenshots-tab">
-            <h2 class="font-weight-bold">Screenshots</h2>
-        </div>
-        --}}
+            <div class="tab-pane fade" id="history" role="tabpanel" aria-labelledby="history-tab">
+                @include('recording.history')
+            </div>
+            {{-- <div class="tab-pane fade" id="screenshots" role="tabpanel" aria-labelledby="screenshots-tab">
+                <h2 class="font-weight-bold">Screenshots</h2>
+            </div> --}}
         </div>
     </div>
 
-    <!-- Modal -->
-    <div class="modal fade" id="recording-modal" tabindex="-1" role="dialog" aria-labelledby="recording-modal-title"
-        aria-hidden="true" data-backdrop="static">
-        <div class="modal-dialog modal-xl modal-dialog-centered" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="exampleModalLongTitle">Recorder</h5>
-                    <button type="button" class="btn btn-danger close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <div class="row">
-                        <div class="col-md-6 video_selector" hidden>
-                            <label for="video-select">Select Video Device:</label>
-                            <select id="video-select" class="form-control">
-                                <option value="">Select Video device</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6 audio_selector" hidden>
-                            <label for="audio-select">Select Audio Device:</label>
-                            <select id="audio-select" class="form-control">
-                                <option value="">Select audio device</option>
-                            </select>
-                        </div>
-                    </div>
+    <!-- New Record Modal -->
+    @include('recording.modal.create')
 
-                    <!-- My Video -->
-                    <div class="recording" style="max-height: 60vh; max-width: 100%"></div>
-                    <div class="mt-2"></div>
-                    <div class="control-buttons mt-2">
-                        <button type="button" role="button" class="btn btn-primary mt-4 start_recording"><i
-                                class="fa fa-play"></i>
-                            &nbsp;&nbsp; Start</button>
+    <!-- edit Record Modal -->
+    @include('recording.modal.edit')
 
-                        <button type="button" role="button" class="btn btn-secondary mt-4 pause_recording"><i
-                                class="fa fa-pause"></i>
-                            &nbsp;&nbsp; Pause</button>
+    <!-- share Modal -->
+    @include('recording.modal.share')
 
-                        <button type="button" role="button" class="btn btn-info mt-4 resume_recording"><i
-                                class="fa fa-play"></i>
-                            &nbsp;&nbsp; Resume </button>
 
-                        <button type="button" role="button" class="btn btn-danger mt-4 stop_recording"><i
-                                class="fa fa-stop"></i>
-                            &nbsp;&nbsp; Stop </button>
-                    </div>
-
-                    <button type="button" role="button" class="btn btn-primary mt-4 restart_recording"
-                        data-status="draft">Restart
-                        Recording</button>
-                    <button type="button" role="button" class="btn btn-primary mt-4 save_video"
-                        data-status="draft">Save
-                        Draft</button>
-                    <button type="button" role="button" class="btn btn-primary mt-4 save_video"
-                        data-status="publish">Publish
-                        Video</button>
-                </div>
-            </div>
-        </div>
-    </div>
 @endsection
 @section('js')
+    {{-- <script src="{{ asset('js/summernote.js') }}"></script> --}}
+    {{-- <script src="https://cdn.jsdelivr.net/npm/video-stream-merger@4.0.1/dist/video-stream-merger.min.js"></script> --}}
+
+
+    <script src="https://www.webrtc-experiment.com/RecordRTC.js"></script>
+    <script src="https://www.webrtc-experiment.com/MultiStreamsMixer.js"></script>
+    <script src="https://www.webrtc-experiment.com/common.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.js"></script>
+    @include('partials.datatable-js')
+    @include('recording.summernote')
+    <script src="{{ asset('js/video-stream-merger.js') }}"></script>
 
     <script>
         var player = null;
+        let player_face = null;
+        let is_company = `{{ is_company() }}` == '0';
+        var pipEnabled = false;
+        var pipStatusMsg;
+        let maxLength = "{{ $user->plan->recording_minutes_limit }}" * 60;
+        let recordWithFace = true;
+
+        let blobs = {
+            screen: null,
+            face: null
+        };
+
+        var video_recorder = {
+            poster: "",
+            posterUrl: null,
+            video: "",
+            videoUrl: null,
+            face: "",
+            faceUrl: null,
+            status: 'draft'
+        };
+
+        if (window.self == window.parent && is_company) {
+            document.querySelector('body').classList.remove('iframe');
+        }
+
+        let audioRecord = null;
+
+
+
+
+
         $(document).ready(function() {
-            $('.save_video, .restart_recording').hide();
-            hideControls()
 
-            let maxLength = 100;
+            if (window.parent != window.self) {
+                $('.share_recording').hide();
+            } else {
+                $('.share_outside_recording').hide();
+            }
 
-            let video_recorder = {
-                poster: "",
-                video: null,
-                status: 'draft',
-                posterUrl: null,
-                videoUrl: null,
+            setTimeout(function() {
+                if (location.href.includes('action=share')) {
+                    $('.share_recording').trigger('click');
+                }
+            }, 2000);
+
+            $.ajaxSetup({
+                headers: {
+                    'token-id': localStorage.getItem('token-id'),
+                }
+            });
+
+            loadingStart();
+            $('.save_video, .restart_recording, .save_recording_btn').hide();
+            hideControls();
+
+            // document.querySelector('.recording').insertAdjacentHTML('afterbegin',
+            //     `<video id="my-final-source"  class="video-js vjs-default-skin mt-4 h-full w-100" ></video>`
+            // );
+
+            // setTimeout(function() {
+            //     var composite1 = new VideoStreamMerger()
+            //     composite1.addStream(player.record().stream, {
+            //         index: 0
+            //     })
+            //     composite1.addStream(player_face.record().stream, {
+            //         x: composite.width - 150,
+            //         y: composite.height - 100,
+            //         width: 150,
+            //         height: 150,
+            //         index: 3
+            //     });
+            //     composite1.start();
+            //     document.querySelector('#my-final-source').srcObject = composite1.result;
+            // }, 3000);
+
+
+
+            let video_setting = {
+                width: {
+                    min: 640,
+                    ideal: 640,
+                    max: 1280
+                },
+                height: {
+                    min: 480,
+                    ideal: 480,
+                    max: 720
+                },
             };
-
+            //userinactive
             let video = {
                 controls: true,
+                // autoMuteDevice: true,
                 controlBar: {
                     fullscreenToggle: true,
                     volumePanel: true,
@@ -197,11 +267,36 @@
                 plugins: {
                     record: {
                         audio: true,
-                        video: true,
+                        // pip: pipEnabled,
+                        video: video_setting,
+
+                        maxLength: maxLength,
+                        displayMilliseconds: false,
+                        frameWidth: 1080,
+                        frameHeight: 720,
+                        // debug: true,
+                        muted: false
+                    }
+                }
+            };
+
+            let video_screen = {
+                controls: false,
+                controlBar: {
+                    fullscreenToggle: false,
+                    volumePanel: false,
+                    customControlSpacer: false
+                },
+                plugins: {
+                    record: {
+                        // pip: pipEnabled,
+                        audio: false,
+                        video: video_setting,
+
                         maxLength: maxLength,
                         displayMilliseconds: false,
                         // debug: true,
-                        muted: false
+
                     }
                 }
             };
@@ -241,44 +336,77 @@
                     });
             }
 
-            function captureFirstFrame(videoElement) {
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                const firstFrameWidth = videoElement.videoWidth;
-                const firstFrameHeight = videoElement.videoHeight;
-                canvas.width = firstFrameWidth;
-                canvas.height = firstFrameHeight;
-                ctx.drawImage(videoElement, 0, 0, firstFrameWidth, firstFrameHeight);
-                return new Promise((resolve, reject) => {
-                    canvas.toBlob(blob => {
-                        const a = document.createElement('a');
-                        const url = URL.createObjectURL(blob);
-                        URL.revokeObjectURL(url);
-                        resolve(blob);
-                    }, 'image/png');
-                });
+            function recordUserFace() {
+                if (recordWithFace) {
+                    player_face = videojs('my-video-face', video_screen,
+                        function() {
+                            // // console.log('videojs-record initialized!');
+                        });
+                    player_face.ready(function() {
+                        setTimeout(function() {
+                            var videoDeviceId = $('#video-select').val();
+                            if (videoDeviceId != '') {
+                                player_face.record().setVideoInput(videoDeviceId);
+                            }
+                            $('.vjs-icon-video-perm')
+                                .trigger('click');
+                            document.querySelector('#my-video-face').setAttribute('class', '');
+                        }, 500);
+
+                    });
+
+                    // error handling
+                    player_face.on('deviceError', function() {
+                        console.warn('device error:', player_face
+                            .deviceErrorCode);
+                    });
+
+                    // user clicked the record button and started recording
+                    player_face.on('error', function(element, error) {
+                        console.error(error);
+                    });
+
+                    player_face.on('finishRecord', function() {
+                        blobs.face = player_face.recordedData;
+                    });
+                }
             }
 
             function getUserMediaDictionary(instance = null) {
                 try {
                     navigator.mediaDevices.enumerateDevices()
                         .then(function(devices) {
-                            // console.log(devices);
+                            // // console.log(devices);
                             devices.forEach(function(device) {
                                 if (device.kind === 'videoinput') {
-                                    addDeviceToSelect(device, 'video_selector');
+                                    addDeviceToSelect(device, 'video_selector', instance);
                                 } else if (device.kind === 'audioinput') {
                                     addDeviceToSelect(device, 'audio_selector');
                                 }
                             });
+                            // console.log(player, player_face);
+                            $('.start_recording').hide();
+                            $('.save_recording_btn').hide();
 
                             if (player) {
                                 player.dispose();
                             }
 
+                            if (player_face) {
+                                player_face.dispose();
+                            }
+
                             document.querySelector('.recording').insertAdjacentHTML('afterbegin',
-                                `<video id="my-video" playsinline class="video-js vjs-default-skin mt-4 w-100" style="max-height: 600px position: relative"></video>`
+                                `<video id="my-video" playsinline class="video-js vjs-default-skin mt-4 h-full w-100" ></video>`
                             );
+
+                            // if (instance == 'screen1') {
+                            if (instance == 'screen') {
+                                document.querySelector('.recording').insertAdjacentHTML('afterbegin',
+                                    `<video id="my-video-face" playsinline class="video-js hide vjs-default-skin mt-4 h-full w-100" ></video>`
+                                );
+                                setTimeout(recordUserFace, 500);
+                            }
 
                             setTimeout(function() {
                                 if (instance == null || instance == undefined || instance == '') {
@@ -288,24 +416,28 @@
                                 if (instance == 'screen') {
                                     instance = screen_only;
                                     $('.video_selector').attr('hidden', true);
+                                    $('.self_checkbox').removeAttr('hidden');
                                 }
+
                                 let prev = instance;
                                 if (instance == 'video') {
                                     instance = video;
                                     $('.video_selector').removeAttr('hidden');
+                                    $('.self_checkbox').attr('hidden', true);
                                 }
 
                                 setTimeout(function() {
+
                                     function init_top(selector) {
                                         let parent = document.querySelector(
                                             `.${selector} select`);
                                         if (parent && parent.value == '') {
-                                            let audio = parent.querySelector(
+                                            let element = parent.querySelector(
                                                 ' option:nth-child(2)');
-                                            if (audio) {
-                                                audio.selected = true;
-                                                $(audio).trigger('change');
-                                                audio.dispatchEvent(new Event('change'));
+                                            if (element) {
+                                                element.selected = true;
+                                                $(element).trigger('change');
+                                                element.dispatchEvent(new Event('change'));
                                             }
                                         }
                                     }
@@ -316,16 +448,17 @@
                                     init_top('audio_selector');
                                 }, 200);
 
+                                applyAudioWorkaround(instance);
+                                applyVideoWorkaround(instance);
                                 // initialize video js
+
                                 player = videojs('my-video', instance, function() {
-                                    console.log('videojs-record initialized!');
                                     $('.start_recording').show();
                                 });
 
-                                // hide record button
                                 player.ready(function() {
-                                    $('.vjs-control-bar .vjs-record-button')
-                                        .hide();
+                                    // $('.vjs-control-bar .vjs-record-button')
+                                    //     .hide();
                                 });
 
                                 var videoDeviceId = $('#video-select').val();
@@ -351,67 +484,229 @@
                                     console.error(error);
                                 });
 
+                                player.on('play', function(element, error) {
+                                    if (player_face && recordWithFace) {
+                                        player_face.player_.play()
+                                    }
+                                });
+
+                                player.on('pause', function(element, error) {
+                                    if (player_face && recordWithFace) {
+                                        player_face.player_.pause()
+                                    }
+                                });
+
+                                player.on('stop', function(element, error) {
+                                    if (player_face && recordWithFace) {
+                                        player_face.player_.stop()
+                                    }
+                                });
+
                                 // user clicked the record button and started recording
+
                                 player.on('startRecord', function() {
                                     $('.stop_recording, .pause_recording').show();
-                                    $('.start_recording').hide();
+                                    // $('.start_recording').hide();
+                                    // $('.save_recording_btn').hide();
+                                    $('.selection_dropdown').hide();
+
+                                    if (player_face && recordWithFace) {
+                                        setTimeout(function() {
+                                            player_face.record().start();
+                                            // setTimeout(function() {
+                                            //     //player_face.exitPictureInPicture()
+
+                                            //     // $('.vjs-icon-picture-in-picture-start')
+                                            //     //     .trigger(
+                                            //     //         'click');
+                                            // }, 500);
+                                        }, 500);
+                                    }
+
+                                    setTimeout(function() {
+                                        $('.vjs-hidden.vjs-icon-replay').removeClass(
+                                            'vjs-hidden');
+                                    }, 500);
+
+                                    if ($('.custom_play').length == 0) {
+                                        var myButton = player.controlBar.addChild('button', {},
+                                            0);
+                                        // console.log(myButton);
+                                        var myButtonDom = myButton.el();
+                                        myButtonDom.classList.add('custom',
+                                            'custom_play',
+                                            'custom_vd_btn',
+                                            'vjs-icon-pause',
+                                            'vjs-control', 'vjs-button');
+                                        myButtonDom.onclick = function() {
+
+                                            if (this.classList.contains('vjs-icon-pause')) {
+                                                this.classList.remove('vjs-icon-pause');
+                                                this.classList.add('vjs-icon-play');
+                                                player.record().pause();
+                                            } else {
+                                                this.classList.remove('vjs-icon-play');
+                                                this.classList.add('vjs-icon-pause');
+                                                player.record().resume();
+                                            }
+                                        };
+                                    } else {
+                                        setTimeout(function() {
+                                            let custom_play = document.querySelector(
+                                                '.custom_play');
+                                            custom_play.classList.remove(
+                                                'vjs-icon-play');
+                                            custom_play.classList.add('vjs-icon-pause');
+                                        }, 1500);
+                                    }
+                                    // Setting control text for the button hover effect
+                                    //myButton.controlText("Pause Recording");
+                                    // Setting the control button click function
+                                });
+
+                                player.on('stopRecord', function() {
+                                    // // console.log('stopped recording');
                                 });
 
                                 // user completed recording and stream is available
                                 player.on('finishRecord', function() {
                                     hideControls(true);
-                                    $('.save_video, .restart_recording').show();
+
+                                    $('.selection_dropdown').show();
+
+                                    setTimeout(function() {
+                                        $('.vjs-icon-photo-camera').addClass(
+                                            'vjs-hidden');
+                                    }, 500);
+
+                                    if (player_face && recordWithFace) {
+                                        player_face.record().stop();
+                                    }
+
+                                    $('.save_video, .restart_recording, .save_recording_btn')
+                                        .show();
                                     $('.start_recording, .pause_recording, .resume_recording, .stop_recording')
                                         .hide();
+                                    $('.custom.vjs-icon-pause').remove();
+
+                                    // capturing the first frame of the stream
                                     captureFirstFrame(document.querySelector(
                                         '#my-video #my-video_html5_api')).then(t => {
                                         video_recorder.poster = t;
                                     });
-                                    video_recorder.video = player.recordedData;
-                                });
 
+                                    if (recordWithFace && player_face) {
+                                        console.log('capturing player face');
+                                        captureFirstFrame(document.querySelector(
+                                                '#my-video-face #my-video-face_html5_api'))
+                                            .then(t => {
+                                                video_recorder.face = t;
+                                            });
+                                    }
+
+                                    blobs.screen = player.recordedData;
+                                    // if (prev == 'screen') {
+                                    //     setTimeout(function() {
+                                    //         // blobs.face = player_face.recordedData;
+                                    //         // loadingStart('Merging...');
+                                    //         // console.log(blobs);
+                                    //         // var player_video_el =
+                                    //         //     createVideoElementFromBlob(player
+                                    //         //         .recordedData,
+                                    //         //         'player');
+                                    //         // if (recordWithFace) {
+                                    //         //     var player_face_video_el =
+                                    //         //         createVideoElementFromBlob(
+                                    //         //             player_face
+                                    //         //             .recordedData,
+                                    //         //             'player_face');
+                                    //         // }
+                                    //         // console.log(player_video_el,
+                                    //         //     player_face_video_el,
+                                    //         //     player_video_el.id,
+                                    //         //     player_face_video_el.id);
+                                    //         // mergeing 2 elemtns media
+                                    //         // var merge_data = mergeVideos(
+                                    //         //     player_video_el,
+                                    //         //     player_face_video_el);
+                                    //         // console.log(merge_data.result);
+                                    //         // downloadMediaStream(merge_data.result)
+                                    //         // saving blob to database using this
+                                    //         loadingStop();
+                                    //         // set the video blob to the video recorder4
+                                    //         // creating video elements from blobs
+                                    //     }, 1500);
+                                    // }
+                                    video_recorder.video = player.recordedData;
+                                    setTimeout(function() {
+                                        if (recordWithFace && player_face) {
+                                            video_recorder.face = player_face
+                                                .recordedData;
+                                        }
+                                    }, 1000);
+                                });
                                 if (!player.record) {
                                     console.error('Recording plugin is not available.');
                                     return false;
                                 }
-                            }, 300);
-
+                            }, 1000);
                         })
                         .catch(function(err) {
-                            console.log('Error enumerating devices: ' + err);
+                            // console.log('Error enumerating devices: ' + err);
                         });
-
                 } catch (error) {
-                    console.log('Error enumerating devices: ' + error);
+                    // console.log('Error enumerating devices: ' + error);
                 }
             }
 
-            function addDeviceToSelect(device, selectId) {
-                var parent = document.querySelector('.' + selectId);
-                var select = parent.querySelector('select');
-                var option = document.createElement('option');
-                option.value = device.deviceId;
+            function combineImages(imageSrc1, imageSrc2) {
+                return new Promise((resolve, reject) => {
+                    // Create two image objects
+                    const img1 = new Image();
+                    const img2 = new Image();
 
-                let already = select.querySelector('option[value="' + device.deviceId + '"]');
-                if (!already) {
-                    option.text = device.label || 'Device ' + (select.options.length + 1);
-                    select.add(option);
-                }
-                if (select.options.length > 1) {
-                    parent.removeAttribute('hidden');
-                }
+                    // Load the first image
+                    img1.onload = function() {
+                        // Load the second image
+                        img2.onload = function() {
+                            // Create a canvas element
+                            const canvas = document.createElement('canvas');
+                            const ctx = canvas.getContext('2d');
+
+                            // Set canvas dimensions to accommodate both images
+                            canvas.width = Math.max(img1.width, img2.width);
+                            canvas.height = img1.height + img2.height;
+
+                            // Draw the first image onto the canvas
+                            ctx.drawImage(img1, 0, 0);
+
+                            // Draw the second image on top of the first one
+                            ctx.drawImage(img2, 0, img1.height);
+
+                            // Convert canvas content to a blob
+                            canvas.toBlob(blob => {
+                                resolve(blob);
+                            }, 'image/png');
+                        };
+                        img2.src = imageSrc2;
+                    };
+                    img1.src = imageSrc1;
+                });
             }
 
-            function hideControls(param = true) {
-                var elements = $('.start_recording, .pause_recording, .resume_recording, .stop_recording');
-                if (param) {
-                    elements.hide();
+            $('input[name="show_face"]').change(function() {
+                if ($(this).is(':checked')) {
+                    $('#my-video-face').show();
+                    recordWithFace = true;
                 } else {
-                    elements.show();
+                    $('#my-video-face').hide();
+                    recordWithFace = false;
                 }
-            }
+            });
 
-            loadingStart();
+            $('input[name="share"]').change(function() {
+                toogleOptions('body', $(this).val());
+            });
 
             $('body').on('click', '[data-target="#recording-modal"]', function(e) {
                 e.preventDefault();
@@ -419,58 +714,89 @@
                 init_perm(type);
             });
 
-            $('#video-select').change(function(e) {
+            $('body').on('click', '[data-target="#edit-recording-modal"]', function(e) {
                 e.preventDefault();
-                player.record().setVideoInput($(this).val() ?? '');
+                let title = $(this).data('title');
+                let description = $(this).data('description');
+
+                $('#title').html(title);
+                $('#edit-recording-modal input[name="title"]').val(title);
+                $('#edit-recording-modal textarea[name="description"]').val(description);
+                $('#edit-recording-modal form').attr('action', $(this).data('url'));
             });
 
-            $('#audio-select').change(function(e) {
+            $('body').on('submit', '#update-recording', function(e) {
                 e.preventDefault();
-                player.record().setAudioInput($(this).val() ?? '');
+                // alert('update');
+                loadingStart('Updating...');
+                let formData = new FormData();
+                formData.append('title', $('#edit-recording-modal input[name="title"]').val());
+                formData.append('description', $('#edit-recording-modal textarea[name="description"]')
+                    .val());
+                formData.append('_token', "{{ csrf_token() }}");
+                formData.append('_method', 'PATCH');
+                $.ajax({
+                    type: "POST",
+                    url: $(this).attr('action'),
+                    data: formData,
+                    // dataType: "dataType",
+                    processData: false,
+                    contentType: false,
+                    success: function(response) {
+                        if (response.success == true) {
+                            toastr.success(response.message);
+                            loadingStop();
+                            location.reload();
+                        } else {
+                            toastr.error('Error Occured while updating');
+                        }
+                    },
+                    error: function(error) {
+                        loadingStop();
+                        toastr.error('Error Occured while updating');
+                        let errorMessage = error.responseJSON.message;
+                        $('.alert-message').html(errorMessage).show();
+                    }
+                });
             });
 
-            $('.start_recording').click(function(e) {
-                e.preventDefault();
-                hideControls(true);
-                applyVideoWorkaround();
-                $('#video-select, #audio-select').prop('disabled',
-                    'disabled'); // Disable the video select dropdown
-                player.record().start();
+            $('body').on('click', '.share_tabs li a', function(e) {
+                if ($('.share_tabs li a.active').attr('href') == '#frame') {
+                    $('.share_btn').hide();
+                    let x = iframeGen(true);
+                    copyToClipboard(x);
+                    $('.emded_code').val(x);
+                } else {
+                    $('.share_btn').show();
+                }
             });
 
-            $('.pause_recording').click(function(e) {
-                e.preventDefault();
-                hideControls(true);
-                $('.stop_recording, .resume_recording').show();
-                player.record().pause();
+            $('body').on('click', '.share_outside_recording', function(e) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Oops...',
+                    text: 'Due to security reasons, you cannot record a screen inside the iframe. Please do screen recording in new tab opened.',
+                });
             });
 
-            $('.resume_recording').click(function(e) {
+            $('body').on('click', '[data-target="#share-modal"]', function(e) {
                 e.preventDefault();
-                hideControls(true);
-                $('.stop_recording, .pause_recording').show();
-                player.record().resume();
-            });
+                videoObj.title = $(this).data('title');
+                videoObj.src = $(this).data('text');
+                videoObj.short = $(this).data('short');
+                $('.share_tabs li a').trigger('click');
+                $('#recording_id').val($(this).data('value'));
+                toogleOptions('body', $('input[name="share"]:checked').val());
+                $('#share-recording-heading').html($(this).data('title'));
+                $('#subject').val($(this).data('title'));
+                //getContacts();
 
-            $('.stop_recording').click(function(e) {
-                e.preventDefault();
-                hideControls(true);
-                $('.start_recording').show();
-                player.record().stop();
-            });
-
-            $('.restart_recording').click(function(e) {
-                e.preventDefault();
-                hideControls(true);
-                $('.start_recording').show();
-                $('.save_video, .restart_recording').hide();
-                player.record().start();
             });
 
             $('.save_video').click(async function(e) {
                 e.preventDefault();
-                loadingStart('Saving Recording...');
-                // $(this).attr('disabled', 'disabled');
+                // // console.log('saving video');
+                loadingStart('Saving...');
 
                 let status = $(this).data('status');
                 video_recorder.status = status;
@@ -478,6 +804,7 @@
                 const fetchFormData = async (formData) => {
                     const data = await sendFormData(formData);
                     if (data?.formData && data?.field_id) {
+                        // // console.log(data.formData);
                         const field = data.formData[data.field_id];
                         const values = Object.values(field);
                         if (values.length > 0) {
@@ -488,217 +815,110 @@
                     return null;
                 };
 
+                console.log(video_recorder);
+
                 video_recorder.posterUrl = await fetchFormData(video_recorder.poster);
                 video_recorder.videoUrl = await fetchFormData(video_recorder.video);
+                if (recordWithFace && player_face) {
+                    video_recorder.face_poster = await fetchFormData(video_recorder.face);
+                    video_recorder.face = await fetchFormData(video_recorder.face);
+                }
 
-                // $(this).attr('disabled', '');
-                console.log(video_recorder);
-                saveRecording(video_recorder);
 
+                // saveRecording(video_recorder);
                 loadingStop();
             });
+            loadingStop();
+        });
 
-            function saveRecording(video_recorder) {
-                let formData = new FormData();
-                formData.append('status', video_recorder.status);
-                formData.append('poster', video_recorder.poster);
-                formData.append('video', video_recorder.video);
-                formData.append('posterUrl', video_recorder.posterUrl);
-                formData.append('videoUrl', video_recorder.videoUrl);
-                $.ajaxSetup({
-                    headers: {
-                        'X-CSRF-TOKEN': "{{ csrf_token() }}"
-                    }
-                });
-                $.ajax({
-                    type: "POST",
-                    url: "{{ route('recordings.store') }}",
-                    data: formData,
-                    processData: false,
-                    contentType: false,
-                    success: function(response) {
-                        console.log(response);
-                        if (response.success == true) {
-                            Swal.fire({
-                                icon: 'success',
-                                title: 'Success',
-                                text: response.message,
-                                showConfirmButton: false,
-                                timer: 1000
-                            });
-                        } else {
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'Oops...',
-                                text: response.message,
-                            });
-                        }
-                        Swal.close();
-                        location.reload();
+
+        $("#recording-modal").on("hidden.bs.modal", function() {
+            // console.log(player);
+            // if (player) {
+            //     player.dispose();
+            // }
+            // console.log('recording modal closed');
+        });
+
+        function sendFormData(file) {
+            let form_Id = "HlYGceKpcoDe2MWZxjDx";
+            let custom_field_file = "cu9TvjMrwWJVXjRrS1vv";
+
+            let host = 'api.leadconnectorhq.com';
+            let page_url = `https://${host}/widget/form/${form_Id}`;
+            let formData = {
+                formId: form_Id,
+                location_id: "l1Rz4SuzYvlVt6ZxaFoT",
+                email: "inc_info@gmail.com",
+                sessionId: "51fbffd8-8f71-477f-8989-0ba1e5197434",
+                eventData: {
+                    source: "direct",
+                    referrer: "",
+                    keyword: "",
+                    adSource: "",
+                    url_params: {},
+                    page: {
+                        url: page_url,
+                        title: ""
                     },
-                    error: function(error) {
-                        console.log(error);
-                        Swal.close();
-                    }
-                });
-            }
-
-            function sendFormData(file) {
-                let form_Id = "HlYGceKpcoDe2MWZxjDx";
-                let custom_field_file = "cu9TvjMrwWJVXjRrS1vv";
-
-                let host = 'api.leadconnectorhq.com';
-                let page_url = `https://${host}/widget/form/${form_Id}`;
-                let formData = {
-                    formId: form_Id,
-                    location_id: "l1Rz4SuzYvlVt6ZxaFoT",
-                    email: "inc_info@gmail.com",
-                    sessionId: "51fbffd8-8f71-477f-8989-0ba1e5197434",
-                    eventData: {
-                        source: "direct",
-                        referrer: "",
-                        keyword: "",
-                        adSource: "",
-                        url_params: {},
-                        page: {
-                            url: page_url,
-                            title: ""
-                        },
-                        timestamp: new Date().getTime(),
-                        campaign: "",
-                        contactSessionIds: null,
-                        fbp: "",
-                        fbc: "",
-                        type: "page-visit",
-                        parentId: form_Id,
-                        pageVisitType: "form",
-                        domain: host,
-                        version: "v3",
-                        parentName: "Work ScreenShots - Do not delete form",
-                        fingerprint: null,
-                        gaClientId: "GA1.2.1779790463.1673615426",
-                        fbEventId: "b515d2f4-cb1c-4ac6-b0d0-4095e2f18a95",
-                        medium: "form",
-                        mediumId: form_Id
-                    },
-                    sessionFingerprint: "157acabf-8e5e-4a59-8b9e-cf00e9515455"
-                };
+                    timestamp: new Date().getTime(),
+                    campaign: "",
+                    contactSessionIds: null,
+                    fbp: "",
+                    fbc: "",
+                    type: "page-visit",
+                    parentId: form_Id,
+                    pageVisitType: "form",
+                    domain: host,
+                    version: "v3",
+                    parentName: "Videos - Do not delete form",
+                    fingerprint: null,
+                    gaClientId: "GA1.2.1779790463.1673615426",
+                    fbEventId: "b515d2f4-cb1c-4ac6-b0d0-4095e2f18a95",
+                    medium: "form",
+                    mediumId: form_Id
+                },
+                sessionFingerprint: "157acabf-8e5e-4a59-8b9e-cf00e9515455"
+            };
+            let ext = false;
+            try {
                 var form = new FormData();
                 form.append(custom_field_file, file, "map_image.png");
                 form.append("formData", JSON.stringify(formData));
+            } catch (error) {
+                ext = true;
+            }
+
+            return new Promise((resolve, reject) => {
+                if (ext) {
+                    resolve('');
+                }
                 var request = new XMLHttpRequest();
                 request.open(
                     "POST",
                     "https://services.leadconnectorhq.com/forms/submit",
                     true
                 );
-                return new Promise((resolve, reject) => {
-                    request.onreadystatechange = function() {
-                        if (this.readyState == 4 && [200, 201].includes(this.status)) {
-                            let data = request.responseText;
-                            try {
-                                data = JSON.parse(data);
-                            } catch (error) {}
-                            data.field_id = custom_field_file;
-                            resolve(data);
-                        }
-                    };
-                    request.send(form);
-                });
-            }
-
-            $('.copy-link').click(function(e) {
-                e.preventDefault();
-                let link = $(this).data('link');
-                copyToClipboard(link);
+                request.onreadystatechange = function() {
+                    if (this.readyState == 4 && [200, 201].includes(this.status)) {
+                        let data = request.responseText;
+                        try {
+                            data = JSON.parse(data);
+                        } catch (error) {}
+                        data.field_id = custom_field_file;
+                        resolve(data);
+                    }
+                };
+                request.send(form);
             });
-
-            $('.copy-iframe').click(function(e) {
-                e.preventDefault();
-                let link = $(this).data('link');
-                text =
-                    `<iframe src="${link}" width="100%" height="100%" frameborder="0" allowfullscreen></iframe>`;
-                copyToClipboard(text);
-            });
-
-            function copyToClipboard(text) {
-                const el = document.createElement('textarea');
-                el.value = text;
-                document.body.appendChild(el);
-                el.select();
-                document.execCommand('copy');
-                document.body.removeChild(el);
-                showSwal();
-            }
-
-            function showSwal() {
-                Swal.fire({
-                    title: 'Copied',
-                    text: 'Copied to the clipboard.',
-                    icon: 'success',
-                    timer: 1000,
-                    showConfirmButton: false
-                });
-            }
-
-
-            loadingStop();
-
-            // $('.save_video').click(function(e) {
-            //     e.preventDefault();
-            //     let status = $(this).data('status');
-            //     video_recorder.status = status;
-
-            //     let formData = new FormData();
-            //     formData.append('status', video_recorder.status);
-            //     formData.append('poster', video_recorder.poster);
-            //     formData.append('video', video_recorder.video);
-
-            //     $.ajaxSetup({
-            //         headers: {
-            //             'X-CSRF-TOKEN': "{{ csrf_token() }}"
-            //         }
-            //     });
-
-            //     // Show SweetAlert with progress bar
-            //     Swal.fire({
-            //         title: 'Saving Recording',
-            //         html: '<div class="progress"><div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%"></div></div>',
-            //         allowOutsideClick: false,
-            //         allowEscapeKey: false,
-            //         showConfirmButton: false,
-            //         backdrop: 'rgba(0,0,0,0.5)'
-            //     });
-
-            //     $.ajax({
-            //         type: "POST",
-            //         url: "{{ route('recordings.store') }}",
-            //         data: formData,
-            //         processData: false,
-            //         contentType: false,
-            //         xhr: function() {
-            //             var xhr = new window.XMLHttpRequest();
-            //             xhr.upload.addEventListener('progress', function(e) {
-            //                 if (e.lengthComputable) {
-            //                     var percent = Math.round((e.loaded / e.total) * 100);
-            //                     $('.progress-bar').css('width', percent + '%').attr(
-            //                         'aria-valuenow', percent).html(percent + '%');
-            //                 }
-            //             });
-            //             return xhr;
-            //         },
-            //         success: function(response) {
-            //             console.log(response);
-            //             Swal.close();
-            //         },
-            //         error: function(error) {
-            //             console.log(error);
-            //             Swal.close();
-            //         }
-            //     });
-            // });
-
-
-        });
+        }
+    </script>
+    @include('recording.processing')
+    @include('recording.events')
+    @include('recording.get-data')
+    @include('recording.datatable')
+    <script>
+        fetchData(1);
+        getTags();
     </script>
 @endsection

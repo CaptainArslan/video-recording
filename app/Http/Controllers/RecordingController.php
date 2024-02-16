@@ -89,7 +89,7 @@ class RecordingController extends Controller
         $recording->fill([
             'user_id' => $user->id,
             'title' => Carbon::now()->format('Y-m-d H:i:s'),
-            'description' => $request->description ?? null,
+            'description' => $request->description ?? "",
             // 'file' =>  $request->video,
             'file_url' => $request->videoUrl,
             // 'poster' => $request->poster,

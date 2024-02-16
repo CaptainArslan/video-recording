@@ -384,9 +384,9 @@ function ghl_api_call($url = '', $method = 'get', $data = '', $headers = [], $js
     }
 
     // if ($bd && isset($bd->error) && $bd->error == 'Unauthorized') {
-    if (isset($bd->error) && strtolower($bd->error) == 'unauthorized') {
+    if ($bd && isset($bd->error) &&  strtolower($bd->error) == 'unauthorized'  && strpos(strtolower($bd->message), 'authclass') === false) {
         request()->code = get_setting($userId, 'ghl_refresh_token');
-        if (strpos($bd->message, 'expired') !== false) {
+        if (strpos($bd->message, 'access') !== false && (strpos($bd->message, 'expired') !== false || stripos($bd->message, 'invalid') !== false)) {
             if (empty(request()->code)) {
                 response()->json(['Refresh token no longer exists'])->send();
                 exit();

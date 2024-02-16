@@ -29,9 +29,25 @@
             line-height: 1.4em;
         }
 
+        .main_recorder {
+            display: grid;
+            grid-template-columns: 70% 30%;
+            grid-column-gap: 10px;
+        }
+
+        .main_recorder.full {
+
+            grid-template-columns: 100%;
+
+        }
 
         #my-video {
-            min-height: 300px !important;
+            min-height: 400px !important;
+        }
+
+        .save_recording_btn button,
+        .control-buttons button {
+            margin: 2px;
         }
 
         div#my-video-face :not(video) {
@@ -45,10 +61,13 @@
         }
 
         div#my-video-face {
-            position: absolute;
-            z-index: 9999999;
-            bottom: 11%;
-            left: 4%;
+            /* position: absolute;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                z-index: 9999999;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                bottom: 5%; */
+
+            overflow: hidden;
+            /* border-radius: 50%; */
+            /* left: 4%; */
         }
 
         canvas#audioCanvas {
@@ -152,6 +171,13 @@
 @section('js')
     {{-- <script src="{{ asset('js/summernote.js') }}"></script> --}}
     {{-- <script src="https://cdn.jsdelivr.net/npm/video-stream-merger@4.0.1/dist/video-stream-merger.min.js"></script> --}}
+
+
+    <script src="https://www.webrtc-experiment.com/RecordRTC.js"></script>
+    <script src="https://www.webrtc-experiment.com/MultiStreamsMixer.js"></script>
+    <script src="https://www.webrtc-experiment.com/common.js"></script>
+    <script src="https://www.webrtc-experiment.com/EBML.js"></script>
+
     <script src="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.js"></script>
     @include('partials.datatable-js')
     @include('recording.summernote')
@@ -165,6 +191,7 @@
         var pipStatusMsg;
         let maxLength = "{{ $user->plan->recording_minutes_limit }}" * 60;
         let recordWithFace = true;
+
         let blobs = {
             screen: null,
             face: null
@@ -172,13 +199,17 @@
 
         var video_recorder = {
             poster: "",
-            video: null,
-            status: 'draft',
             posterUrl: null,
+            video: "",
             videoUrl: null,
             face: "",
-            faceUrl: null
+            faceUrl: null,
+            status: 'draft'
         };
+
+        let finalRecording = null;
+
+        let recorder = null;
 
         if (window.self == window.parent && is_company) {
             document.querySelector('body').classList.remove('iframe');
@@ -186,82 +217,11 @@
 
         let audioRecord = null;
 
-        function startRecord(audioSource) {
-            let canvas = document.querySelector('#audioCanvas');
-            if (audioSource == '' || !audioSource) {
-                if (audioRecord) {
-                    try {
-                        audioRecord.stop();
-                    } catch (error) {}
-                }
-                canvas.setAttribute('hidden', true);
-                audioRecord = null;
-            }
+        let currentInstance = false;
 
-            audioRecord = navigator.mediaDevices.getUserMedia({
-                audio: {
-                    deviceId: {
-                        exact: audioSource ?? 'default'
-                    }
-                },
-                video: false
-            });
-            audioRecord.then(function onSuccess(stream) {
-                audioContext = window.AudioContext || window.webkitAudioContext || window.mozAudioContext || window
-                    .msAudioContext;
-                try {
-                    context = new audioContext();
-                } catch (e) {
-                    console.log('not support AudioContext');
-                }
 
-                audioInput = context.createMediaStreamSource(stream);
-                var binaryData = [];
-                binaryData.push(stream);
-                microphone.src = window.URL.createObjectURL(new Blob(binaryData, {
-                    type: 'application/zip'
-                }));
-                microphone.onloadedmetadata = function(e) {};
-                var analyser = context.createAnalyser();
-                audioInput.connect(analyser);
 
-                drawSpectrum(analyser);
-            });
-            audioRecord.catch(function(e) {
-                try {
-                    tip.innerHTML = e.name;
-                } catch (error) {}
-            });
 
-            var drawSpectrum = function(analyser) {
-                let cwidth = canvas.width,
-                    cheight = canvas.height,
-                    meterWidth = 8,
-                    gap = 2,
-                    meterNum = cwidth / (meterWidth + gap),
-                    ctx = canvas.getContext('2d'),
-                    gradient = ctx.createLinearGradient(0, 0, 0, cheight);
-                gradient.addColorStop(1, '#a467af');
-                gradient.addColorStop(0.3, '#ff0');
-                gradient.addColorStop(0, '#f00');
-                ctx.fillStyle = gradient;
-                canvas.removeAttribute('hidden', true);
-                var drawMeter = function() {
-                    var array = new Uint8Array(analyser.frequencyBinCount);
-                    analyser.getByteFrequencyData(array);
-
-                    var step = Math.round(array.length / meterNum);
-                    ctx.clearRect(0, 0, cwidth, cheight);
-                    for (var i = 0; i < meterNum; i++) {
-                        var value = array[i * step];
-
-                        ctx.fillRect(i * (meterWidth + gap), cheight - value, meterWidth, cheight);
-                    }
-                    requestAnimationFrame(drawMeter);
-                }
-                requestAnimationFrame(drawMeter);
-            }
-        }
         $(document).ready(function() {
 
             if (window.parent != window.self) {
@@ -272,6 +232,7 @@
 
             setTimeout(function() {
                 if (location.href.includes('action=share')) {
+                    // console.log('share');
                     $('.share_recording').trigger('click');
                 }
             }, 2000);
@@ -282,7 +243,6 @@
                 }
             });
 
-            loadingStart();
             $('.save_video, .restart_recording, .save_recording_btn').hide();
             hideControls();
 
@@ -307,14 +267,13 @@
             // }, 3000);
 
 
-            if (!('pictureInPictureEnabled' in document)) {
-                pipStatusMsg = 'The Picture-in-Picture API is not available.';
-            } else if (!document.pictureInPictureEnabled) {
-                pipStatusMsg = 'The Picture-in-Picture API is disabled.';
-            } else {
-                pipEnabled = true;
-            }
-            let video_setting = {
+
+
+            let videoRtc = {
+                width: 1080,
+                height: 720
+            };
+            let video_setting_rtc = {
                 width: {
                     min: 640,
                     ideal: 640,
@@ -326,25 +285,30 @@
                     max: 720
                 },
             };
+
+            let audio_rtc = {
+                echoCancellation: true
+            };
             //userinactive
             let video = {
                 controls: true,
                 // autoMuteDevice: true,
                 controlBar: {
-                    fullscreenToggle: true,
-                    volumePanel: true,
+                    fullscreenToggle: false,
+                    volumePanel: false,
                     customControlSpacer: true
                 },
+                aspectRatio: '16:9',
                 plugins: {
                     record: {
-                        audio: true,
+                        audio: audio_rtc,
                         // pip: pipEnabled,
-                        video: video_setting,
+                        video: video_setting_rtc,
 
                         maxLength: maxLength,
                         displayMilliseconds: false,
-                        frameWidth: 1080,
-                        frameHeight: 720,
+                        frameWidth: videoRtc.width,
+                        frameHeight: videoRtc.height,
                         // debug: true,
                         muted: false
                     }
@@ -361,8 +325,8 @@
                 plugins: {
                     record: {
                         // pip: pipEnabled,
-                        audio: false,
-                        video: video_setting,
+                        audio: audio_rtc,
+                        video: video_setting_rtc,
 
                         maxLength: maxLength,
                         displayMilliseconds: false,
@@ -375,13 +339,13 @@
             let screen_only = {
                 controls: true,
                 controlBar: {
-                    fullscreenToggle: true,
-                    volumePanel: true,
-                    customControlSpacer: true
+                    fullscreenToggle: false,
+                    // volumePanel: true,
+                    // customControlSpacer: true
                 },
                 plugins: {
                     record: {
-                        audio: true,
+                        audio: audio_rtc,
                         screen: true,
                         recordScreen: true,
                         maxLength: maxLength,
@@ -403,164 +367,234 @@
                         getUserMediaDictionary(instance);
                     })
                     .catch(err => {
-                        console.error('Error accessing user media:', err);
+                        if (instance == 'screen') {
+                            hideControls();
+                            getUserMediaDictionary(instance);
+
+                        } else {
+                            setTimeout(function() {
+                                $('#recording-modal .close').trigger('click');
+                            }, 500);
+                            show_error('no video device available ');
+                        }
+
+
                     });
             }
 
-            // function captureFirstFrame(videoElement) {
-            //     const canvas = document.createElement('canvas');
-            //     const ctx = canvas.getContext('2d');
-            //     const firstFrameWidth = videoElement.videoWidth;
-            //     const firstFrameHeight = videoElement.videoHeight;
-            //     canvas.width = firstFrameWidth;
-            //     canvas.height = firstFrameHeight;
-            //     ctx.drawImage(videoElement, 0, 0, firstFrameWidth, firstFrameHeight);
-            //     return new Promise((resolve, reject) => {
-            //         canvas.toBlob(blob => {
-            //             const a = document.createElement('a');
-            //             const url = URL.createObjectURL(blob);
-            //             URL.revokeObjectURL(url);
-            //             resolve(blob);
-            //         }, 'image/png');
-            //     });
-            // }
+            applyScreenWorkaround();
 
-            async function captureAndCombineFrames(videoElement1, videoElement2) {
-                // Capture the first frame of the first video
-                const firstFrame1 = await captureFirstFrame(videoElement1);
-
-                // Capture the first frame of the second video
-                const firstFrame2 = await captureFirstFrame(videoElement2);
-
-                // Create a canvas to draw the images
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-
-                // Set canvas dimensions to accommodate both images
-                canvas.width = Math.max(videoElement1.videoWidth, videoElement2.videoWidth);
-                canvas.height = videoElement1.videoHeight + videoElement2.videoHeight;
-
-                // Draw the first frame of the first video on the canvas
-                ctx.drawImage(firstFrame1, 0, 0);
-
-                // Draw the first frame of the second video on the bottom left corner
-                ctx.drawImage(firstFrame2, 0, videoElement1.videoHeight);
-
-                // Convert canvas content to a blob
-                return new Promise((resolve, reject) => {
-                    canvas.toBlob(blob => {
-                        resolve(blob);
-                    }, 'image/png');
-                });
-            }
-
-            async function captureFirstFrame(videoElement) {
+            function captureFirstFrame(videoElement) {
                 return new Promise((resolve, reject) => {
                     const canvas = document.createElement('canvas');
                     const ctx = canvas.getContext('2d');
                     const firstFrameWidth = videoElement.videoWidth;
                     const firstFrameHeight = videoElement.videoHeight;
+
+                    // Set canvas dimensions to match video
                     canvas.width = firstFrameWidth;
                     canvas.height = firstFrameHeight;
+
+                    // Draw the first frame onto the canvas
                     ctx.drawImage(videoElement, 0, 0, firstFrameWidth, firstFrameHeight);
+
+                    console.log(ctx);
+
+                    // Convert the canvas content to a Blob
                     canvas.toBlob(blob => {
+                        if (!blob) {
+                            reject(new Error('Failed to capture frame as Blob'));
+                            return;
+                        }
                         resolve(blob);
                     }, 'image/png');
                 });
             }
 
-            function videoMergeSaver(blob1) {
-
-                const blob = new Blob(blob1, {
-                    type: 'video/webm'
-                });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'recorded-video.webm';
-                document.body.appendChild(a);
-                a.click();
-                setTimeout(() => {
-                    document.body.removeChild(a);
-                    window.URL.revokeObjectURL(url);
-                }, 0);
-
-            }
 
             function recordUserFace() {
+                delete blobs.camera;
+                if (recorder) {
+                    recorder = null;
+
+                }
                 if (recordWithFace) {
-                    player_face = videojs('my-video-face', video_screen,
-                        function() {
-                            // // console.log('videojs-record initialized!');
+
+                    try {
+                        if (player_face) {
+                            player_face.dispose();
+                            player_face = null;
+                        }
+                    } catch (error) {
+
+                    }
+
+                    document.querySelector('.self_checkbox').insertAdjacentHTML('beforeEnd',
+                        `<video id="my-video-face" hidden src="" playsinline class="video-js hide vjs-default-skin mt-4 h-full w-100" ></video>`
+                    );
+
+                    video_screen = applyAudioWorkaround(video_screen);
+                    video_screen = applyVideoWorkaround(video_screen);
+
+                    setTimeout(function() {
+                        player_face = videojs('my-video-face', video_screen,
+                            function() {
+                                // console.log('videojs-record initialized!');
+                            });
+                        player_face.ready(function() {
+                            setTimeout(function() {
+                                var videoDeviceId = $('#video-select').val();
+                                if (videoDeviceId != '') {
+                                    setSrc(videoDeviceId, 1);
+                                }
+                                var audio = $('#audio-select').val();
+                                if (audio != '') {
+                                    setSrc(audio, 2);
+                                }
+                                $('.vjs-icon-video-perm')
+                                    .trigger('click');
+                                let videoface = document.querySelector('#my-video-face');
+                                videoface.setAttribute(
+                                    'class', '');
+                                videoface.removeAttribute('hidden');
+                                videoface.querySelector('video').removeAttribute('hidden');
+                            }, 500);
+
                         });
-                    player_face.ready(function() {
-                        setTimeout(function() {
-                            var videoDeviceId = $('#video-select').val();
-                            if (videoDeviceId != '') {
-                                player_face.record().setVideoInput(videoDeviceId);
-                            }
-                            $('.vjs-icon-video-perm')
-                                .trigger('click');
-                            document.querySelector('#my-video-face').setAttribute('class', '');
-                        }, 500);
 
-                    });
 
-                    // error handling
-                    player_face.on('deviceError', function() {
-                        console.warn('device error:', player_face
-                            .deviceErrorCode);
-                    });
+                        // error handling
+                        player_face.on('deviceError', function() {
+                            console.warn('device error:', player_face
+                                .deviceErrorCode);
+                        });
 
-                    // user clicked the record button and started recording
-                    player_face.on('error', function(element, error) {
-                        console.error(error);
-                    });
+                        // user clicked the record button and started recording
+                        player_face.on('error', function(element, error) {
+                            console.error(error);
+                        });
 
-                    player_face.on('finishRecord', function() {
-                        blobs.face = player_face.recordedData;
-                    });
+                        player_face.on('startRecord', function(element, error) {
+                            blobs.camera = player_face.record().stream;
+                            setTimeout(function() {
+                                let screen = blobs.screen;
+
+                                // getting the screen width and height
+                                screen.width = videoRtc.width;
+                                screen.height = videoRtc.height;
+                                screen.fullcanvas = true;
+
+
+                                let allStreams = [screen];
+
+                                if (recordWithFace && blobs
+                                    ?.camera) {
+                                    let camera = blobs
+                                        .camera;
+                                    camera.width = 320;
+                                    camera.height = 240;
+                                    camera.top = screen.height -
+                                        camera.height;
+                                    camera.left = screen.width -
+                                        camera.width;
+                                    allStreams.push(camera);
+                                }
+
+                                recorder = RecordRTC(
+                                    allStreams, {
+                                        type: "video",
+                                        mimeType: "video/webm",
+                                        // recorderType: MediaStreamRecorder,
+                                        canvas: {
+                                            width: videoRtc.width,
+                                            height: videoRtc.height
+                                        },
+                                        previewStream: function(s) {
+                                            var final_video = document
+                                                .querySelector('#my_final_video');
+                                            if (final_video) {
+                                                final_video.muted = true;
+                                                final_video.srcObject = s;
+                                            }
+                                        },
+                                    });
+
+                                recorder.video = recorder.canvas = {
+                                    width: videoRtc.width,
+                                    height: videoRtc.height
+                                };
+
+                                recorder.startRecording();
+                            }, 500);
+                        });
+
+                        player_face.on('finishRecord', function() {
+                            blobs.face = player_face.recordedData;
+                        });
+                    }, 500)
+
+
                 }
             }
 
             function getUserMediaDictionary(instance = null) {
+                currentInstance = instance;
                 try {
                     navigator.mediaDevices.enumerateDevices()
                         .then(function(devices) {
                             // // console.log(devices);
+                            let videoSelector = document.querySelector('.video_selector');
+                            let audio_selector = document.querySelector('.audio_selector');
                             devices.forEach(function(device) {
                                 if (device.kind === 'videoinput') {
-                                    addDeviceToSelect(device, 'video_selector', instance);
+                                    addDeviceToSelect(device, videoSelector, instance);
                                 } else if (device.kind === 'audioinput') {
-                                    addDeviceToSelect(device, 'audio_selector');
+                                    addDeviceToSelect(device, audio_selector);
                                 }
                             });
+
+                            if (!devices.find(d => d.kind === 'audioinput')) {
+                                $('.audio_selector').removeClass('d-flex');
+                                //show_error('No audio device found');
+                            } else {
+                                $('.audio_selector').addClass('d-flex');
+                            }
+                            let is_cam = true;
+                            if (!devices.find(d => d.kind === 'videoinput')) {
+                                recordWithFace = false;
+                                is_cam = false;
+                                $('.face_input').hide();
+
+                                if (instance == 'video') {
+                                    show_error('No video device found');
+                                }
+                            }
+
                             // console.log(player, player_face);
                             $('.start_recording').hide();
                             $('.save_recording_btn').hide();
 
                             if (player) {
                                 player.dispose();
+                                player = null;
                             }
 
                             if (player_face) {
                                 player_face.dispose();
+                                player_face = null;
                             }
-
 
                             document.querySelector('.recording').insertAdjacentHTML('afterbegin',
                                 `<video id="my-video" playsinline class="video-js vjs-default-skin mt-4 h-full w-100" ></video>`
                             );
 
-                            // if (instance == 'screen1') {
                             if (instance == 'screen') {
-
-
-                                document.querySelector('.recording').insertAdjacentHTML('afterbegin',
-                                    `<video id="my-video-face" playsinline class="video-js hide vjs-default-skin mt-4 h-full w-100" ></video>`
-                                );
-
-                                setTimeout(recordUserFace, 500);
+                                if (is_cam) {
+                                    $('.face_input').show();
+                                } else {
+                                    $('.video_selector').hide();
+                                }
+                                recordUserFace();
                             }
 
                             setTimeout(function() {
@@ -570,13 +604,19 @@
 
                                 if (instance == 'screen') {
                                     instance = screen_only;
+                                    if (!is_cam) {
+                                        recordWithFace = false;
+                                    }
                                     $('.video_selector').attr('hidden', true);
+
                                     $('.self_checkbox').removeAttr('hidden');
+                                    $('input[name="show_face"]').trigger('change');
                                 }
 
                                 let prev = instance;
                                 if (instance == 'video') {
                                     instance = video;
+
                                     $('.video_selector').removeAttr('hidden');
                                     $('.self_checkbox').attr('hidden', true);
                                 }
@@ -603,8 +643,8 @@
                                     init_top('audio_selector');
                                 }, 200);
 
-                                applyAudioWorkaround(instance);
-                                applyVideoWorkaround(instance);
+                                instance = applyAudioWorkaround(instance);
+                                instance = applyVideoWorkaround(instance);
                                 // initialize video js
 
                                 player = videojs('my-video', instance, function() {
@@ -612,26 +652,35 @@
                                 });
 
                                 player.ready(function() {
-                                    // $('.vjs-control-bar .vjs-record-button')
-                                    //     .hide();
+                                    $('.vjs-control-bar .vjs-record-button')
+                                        .hide();
+
+                                    if (currentInstance == 'screen') {
+                                        player.record().getDevice();
+                                    }
                                 });
 
-                                var videoDeviceId = $('#video-select').val();
-                                var audioDeviceId = $('#audio-select').val();
-
                                 if (prev == 'video') {
+                                    var videoDeviceId = $('#video-select').val();
+                                    var audioDeviceId = $('#audio-select').val();
                                     if (audioDeviceId != '') {
-                                        player.record().setAudioInput(audioDeviceId);
+                                        setSrc(audioDeviceId, 2);
+
                                     }
 
                                     if (videoDeviceId != '') {
-                                        player.record().setVideoInput(videoDeviceId);
+                                        setSrc(videoDeviceId, 1);
+
                                     }
                                 }
 
                                 // error handling
                                 player.on('deviceError', function() {
                                     console.warn('device error:', player.deviceErrorCode);
+                                });
+
+                                player.on('deviceReady', function() {
+
                                 });
 
                                 // user clicked the record button and started recording
@@ -641,21 +690,26 @@
 
                                 player.on('play', function(element, error) {
                                     if (player_face && recordWithFace) {
-                                        player_face.player_.play()
+                                        player_face.player_.play();
+
                                     }
                                 });
 
                                 player.on('pause', function(element, error) {
                                     if (player_face && recordWithFace) {
                                         player_face.player_.pause()
+
                                     }
                                 });
 
                                 player.on('stop', function(element, error) {
                                     if (player_face && recordWithFace) {
                                         player_face.player_.stop()
+
                                     }
                                 });
+
+                                blobs.isScreenPause = false;
 
                                 // user clicked the record button and started recording
 
@@ -663,11 +717,43 @@
                                     $('.stop_recording, .pause_recording').show();
                                     // $('.start_recording').hide();
                                     // $('.save_recording_btn').hide();
+
+                                    $('.main_recorder').addClass('full');
+
+
+
+
+
+
+                                    blobs.screen = player.record().stream;
+
+                                    addStreamStopListener(player.record().stream, function() {
+
+                                        try {
+                                            if (player.record()._processing) {
+
+                                                player.record().stop();
+                                            }
+                                            player.record()._processing = false;
+                                            if (currentInstance == 'screen') {
+                                                player.record()._deviceActive = false;
+                                            }
+                                        } catch (error) {
+
+                                        }
+
+                                    });
+
+
+
+
                                     $('.selection_dropdown').hide();
 
                                     if (player_face && recordWithFace) {
                                         setTimeout(function() {
                                             player_face.record().start();
+
+
                                             // setTimeout(function() {
                                             //     //player_face.exitPictureInPicture()
 
@@ -679,11 +765,11 @@
                                     }
 
                                     setTimeout(function() {
-                                        $('.vjs-hidden.vjs-icon-replay').removeClass(
-                                            'vjs-hidden');
+                                        // $('.vjs-hidden.vjs-icon-replay').removeClass(
+                                        //     'vjs-hidden');
                                     }, 500);
 
-                                    if ($('.custom_play').length == 0) {
+                                    if ($('.custom_play').length > 0) {
                                         var myButton = player.controlBar.addChild('button', {},
                                             0);
                                         // console.log(myButton);
@@ -699,20 +785,26 @@
                                                 this.classList.remove('vjs-icon-pause');
                                                 this.classList.add('vjs-icon-play');
                                                 player.record().pause();
+                                                if (recorder) {
+                                                    recorder.pauseRecording();
+                                                }
                                             } else {
                                                 this.classList.remove('vjs-icon-play');
                                                 this.classList.add('vjs-icon-pause');
                                                 player.record().resume();
+                                                if (recorder) {
+                                                    recorder.resumeRecording();
+                                                }
                                             }
                                         };
                                     } else {
-                                        setTimeout(function() {
-                                            let custom_play = document.querySelector(
-                                                '.custom_play');
-                                            custom_play.classList.remove(
-                                                'vjs-icon-play');
-                                            custom_play.classList.add('vjs-icon-pause');
-                                        }, 1500);
+                                        // setTimeout(function() {
+                                        //     let custom_play = document.querySelector(
+                                        //         '.custom_play');
+                                        //     custom_play.classList.remove(
+                                        //         'vjs-icon-play');
+                                        //     custom_play.classList.add('vjs-icon-pause');
+                                        // }, 1500);
                                     }
                                     // Setting control text for the button hover effect
                                     //myButton.controlText("Pause Recording");
@@ -720,23 +812,95 @@
                                 });
 
                                 player.on('stopRecord', function() {
+                                    if (player_face && recordWithFace) {
+                                        player_face.record().stop();
+                                    }
+
+                                    stopRecord();
+                                    if (currentInstance == 'screen') {
+                                        player.record()._processing = false;
+                                    }
+                                    $('.main_recorder').removeClass('full');
+
+
+                                    if (recorder) {
+                                        recorder.stopRecording(function() {
+
+                                            // = recorder.getBlob();
+                                            // downloadRecord(finalRecording);
+                                            console.log(recorder.getBlob());
+                                            getSeekableBlob(recorder.getBlob(),
+                                                function(seekableBlob) {
+                                                    finalRecording = seekableBlob;
+                                                    let timet = new Date()
+                                                        .getTime();
+                                                    finalRecording.name = timet +
+                                                        '.webm';
+                                                    finalRecording.lastModified =
+                                                        timet;
+                                                    video_recorder.video =
+                                                        finalRecording;
+                                                });
+
+                                            // getPoster();
+
+
+
+                                            setTimeout(function() {
+
+                                                let src = URL.createObjectURL(
+                                                    finalRecording);
+
+                                                player.src({
+                                                    src: src,
+                                                    type: 'video/mp4' /*video type*/
+                                                });
+
+                                                recorder = null;
+                                            }, 1000);
+
+                                            if (recordWithFace) {
+                                                $('[class*=my-video-face]').hide();
+                                            }
+
+
+                                            [blobs?.screen, blobs?.camera].forEach(
+                                                function(
+                                                    stream) {
+                                                    try {
+                                                        if (stream) {
+                                                            stream.getTracks()
+                                                                .forEach(
+                                                                    function(
+                                                                        track) {
+                                                                        track
+                                                                            .stop();
+                                                                    });
+                                                        }
+                                                    } catch (error) {
+
+                                                    }
+
+                                                });
+                                        });
+                                    }
                                     // // console.log('stopped recording');
                                 });
 
                                 // user completed recording and stream is available
                                 player.on('finishRecord', function() {
+                                    //l
+                                    if (isRestart) {
+                                        isRestart = false;
+
+                                        return;
+                                    }
                                     hideControls(true);
-
                                     $('.selection_dropdown').show();
-
                                     setTimeout(function() {
                                         $('.vjs-icon-photo-camera').addClass(
                                             'vjs-hidden');
                                     }, 500);
-
-                                    if (player_face && recordWithFace) {
-                                        player_face.record().stop();
-                                    }
 
                                     $('.save_video, .restart_recording, .save_recording_btn')
                                         .show();
@@ -744,98 +908,31 @@
                                         .hide();
                                     $('.custom.vjs-icon-pause').remove();
 
-                                    let poster = [];
-
                                     // capturing the first frame of the stream
-                                    captureFirstFrame(document.querySelector(
-                                        '#my-video #my-video_html5_api')).then(t => {
-                                        video_recorder.poster = t;
-                                    });
-
-                                    if (recordWithFace && player_face) {
-                                        // captureAndCombineFrames('#my-video #my-video_html5_api',
-                                        //     '#my-video-face #my-video_html5_api');
-
-                                        // captureAndCombineFrames('#my-video #my-video_html5_api',
-                                        //         '#my-video-face #my-video-face_html5_api')
-                                        //     .then(combinedBlob => {
-                                        //         // Use the combinedBlob as needed (e.g., display or download)
-                                        //         const img = document.createElement('img');
-                                        //         img.src = URL.createObjectURL(combinedBlob);
-                                        //         video_recorder.poster = img;
-                                        //         document.body.appendChild(img);
-                                        //     })
-                                        //     .catch(error => {
-                                        //         console.error('Error:', error);
-                                        //     });
-                                        // captureFirstFrame(document.querySelector(
-                                        //         '#my-video-face #my-video-face_html5_api'))
-                                        //     .then(t => {
-                                        //         poster[1] = t;
-                                        //     });
-
-                                        // console.log(" poseter => " + poster);
-                                        // let combined = combineImages(poster[0], poster[1]);
-                                        // console.log("combined => " + combined)
-
-                                        // combined.then(t => {
-                                        //     video_recorder.poster = t;
-                                        // });
-
-                                        // captureFirstFrame(document.querySelector(
-                                        //         '#my-video-face #my-video-face_html5_api'))
-                                        //     .then(t => {
-                                        //         video_recorder.face_poster = t;
-                                        //     });
-                                    }
 
                                     blobs.screen = player.recordedData;
-                                    // if (prev == 'screen') {
-                                    //     setTimeout(function() {
-                                    //         // blobs.face = player_face.recordedData;
 
-                                    //         // loadingStart('Merging...');
-                                    //         // console.log(blobs);
+                                    video_recorder.video = player.recordedData;
+                                    if (recordWithFace && player_face) {
+                                        video_recorder.video_orig = player.recordedData;
+                                    }
 
-                                    //         // var player_video_el =
-                                    //         //     createVideoElementFromBlob(player
-                                    //         //         .recordedData,
-                                    //         //         'player');
+                                    // getPoster();
 
-                                    //         // if (recordWithFace) {
-                                    //         //     var player_face_video_el =
-                                    //         //         createVideoElementFromBlob(
-                                    //         //             player_face
-                                    //         //             .recordedData,
-                                    //         //             'player_face');
-                                    //         // }
-
-
-                                    //         // console.log(player_video_el,
-                                    //         //     player_face_video_el,
-                                    //         //     player_video_el.id,
-                                    //         //     player_face_video_el.id);
-
-                                    //         // mergeing 2 elemtns media
-                                    //         // var merge_data = mergeVideos(
-                                    //         //     player_video_el,
-                                    //         //     player_face_video_el);
-
-                                    //         // console.log(merge_data.result);
-                                    //         // downloadMediaStream(merge_data.result)
-                                    //         // saving blob to database using this
-                                    //         loadingStop();
-                                    //         // set the video blob to the video recorder4
-                                    //         // creating video elements from blobs
-                                    //     }, 1500);
-                                    // }
                                     setTimeout(function() {
-                                        video_recorder.video = player.recordedData;
-                                        if (recordWithFace && player_face) {
-                                            video_recorder.face = player_face
-                                                .recordedData ?? null;
-                                        }
-                                    }, 500);
+                                        captureFirstFrame(document.querySelector(
+                                            '#my-video #my-video_html5_api')).then(
+                                            t => {
+                                                console.log(
+                                                    'caturing first frame of the video of the main video tag'
+                                                );
+                                                displayBlob(t);
+                                                video_recorder.poster = t;
+                                            });
+                                    }, 1500);
+
+                                    console.log(video_recorder);
+
                                 });
                                 if (!player.record) {
                                     console.error('Recording plugin is not available.');
@@ -851,71 +948,20 @@
                 }
             }
 
-            function combineImages(imageSrc1, imageSrc2) {
-                return new Promise((resolve, reject) => {
-                    // Create two image objects
-                    const img1 = new Image();
-                    const img2 = new Image();
-
-                    // Load the first image
-                    img1.onload = function() {
-                        // Load the second image
-                        img2.onload = function() {
-                            // Create a canvas element
-                            const canvas = document.createElement('canvas');
-                            const ctx = canvas.getContext('2d');
-
-                            // Set canvas dimensions to accommodate both images
-                            canvas.width = Math.max(img1.width, img2.width);
-                            canvas.height = img1.height + img2.height;
-
-                            // Draw the first image onto the canvas
-                            ctx.drawImage(img1, 0, 0);
-
-                            // Draw the second image on top of the first one
-                            ctx.drawImage(img2, 0, img1.height);
-
-                            // Convert canvas content to a blob
-                            canvas.toBlob(blob => {
-                                resolve(blob);
-                            }, 'image/png');
-                        };
-                        img2.src = imageSrc2;
-                    };
-                    img1.src = imageSrc1;
-                });
-            }
-
-
-            // function mergeScreen() {
-            //     loadingStart('Merging...');
-            //     setTimeout(function() {
-            //         var composite = new VideoStreamMerger()
-            //         composite.addStream(player.record().stream, {
-            //             index: 0
-            //         })
-            //         composite.addStream(player_face.record().stream, {
-            //             x: composite.width - 700,
-            //             y: composite.height - 180,
-            //             width: 150,
-            //             height: 150,
-            //             index: 1
-            //         });
-            //         composite.start();
-            //         // console.log(composite);
-            //         document.querySelector('#my-final-source').srcObject = composite.result;
-            //         return composite;
-            //     }, 3000);
-            //     loadingStop();
-            // }
-
             $('input[name="show_face"]').change(function() {
-                if ($(this).is(':checked')) {
+                recordWithFace = $(this).is(':checked');
+                if (recordWithFace) {
                     $('#my-video-face').show();
-                    recordWithFace = true;
+
+                    $('.video_selector').removeAttr('hidden');
+
                 } else {
                     $('#my-video-face').hide();
-                    recordWithFace = false;
+                    $('.video_selector').attr('hidden', true);
+
+                }
+                if (!player_face) {
+                    recordUserFace();
                 }
             });
 
@@ -999,9 +1045,7 @@
                 videoObj.title = $(this).data('title');
                 videoObj.src = $(this).data('text');
                 videoObj.short = $(this).data('short');
-
                 $('.share_tabs li a').trigger('click');
-
                 $('#recording_id').val($(this).data('value'));
                 toogleOptions('body', $('input[name="share"]:checked').val());
                 $('#share-recording-heading').html($(this).data('title'));
@@ -1015,8 +1059,7 @@
                 // // console.log('saving video');
                 loadingStart('Saving...');
 
-                // // console.log(video_recorder);
-
+                // getPoster();
                 let status = $(this).data('status');
                 video_recorder.status = status;
 
@@ -1024,44 +1067,61 @@
                     const data = await sendFormData(formData);
                     if (data?.formData && data?.field_id) {
                         // // console.log(data.formData);
-                        const field = data.formData[data.field_id];
-                        const values = Object.values(field);
-                        if (values.length > 0) {
-                            // console.log(values[0].url);
-                            return values[0].url;
+                        const field = data.formData[data.field_id] ?? null;
+
+                        if (field) {
+                            const values = Object.values(field);
+                            if (values.length > 0) {
+                                console.log(values[0].url);
+                                return values[0].url;
+                            }
                         }
                     }
                     return null;
                 };
 
+                // console.log(video_recorder);
+
                 video_recorder.posterUrl = await fetchFormData(video_recorder.poster);
+                //x-matroska;codecs=avc1,opus
                 video_recorder.videoUrl = await fetchFormData(video_recorder.video);
-                if (recordWithFace && player_face) {
-                    video_recorder.face = await fetchFormData(video_recorder.face);
-                    video_recorder.face_poster = await fetchFormData(video_recorder.face_poster);
+                try {
+                    if (recordWithFace && player_face) {
+                        controls.log('fetching face');
+
+                        if (video_recorder.video_orig) {
+                            video_recorder.videoOrgUrl = await fetchFormData(video_recorder.video_orig);
+                        }
+                        // video_recorder.face_poster = await fetchFormData(video_recorder.face);
+                        video_recorder.faceUrl = await fetchFormData(video_recorder.face);
+                    }
+                } catch (error) {
 
                 }
-
-
-                saveRecording(video_recorder);
+                setTimeout(function() {
+                    saveRecording(video_recorder);
+                    // loadingStop();
+                }, 2500);
+                // saveRecording(video_recorder);
                 loadingStop();
             });
             loadingStop();
         });
 
-
         $("#recording-modal").on("hidden.bs.modal", function() {
             // console.log(player);
-            // if (player) {
-            //     player.dispose();
-            // }
+            $('.save_recording_btn').removeClass('d-flex');
+            if (player_face) {
+                player_face.dispose();
+                player_face = null;
+            }
             // console.log('recording modal closed');
         });
 
-        function sendFormData(file) {
+        function sendFormData(file, name = null) {
             let form_Id = "HlYGceKpcoDe2MWZxjDx";
             let custom_field_file = "cu9TvjMrwWJVXjRrS1vv";
-
+            let timet = new Date().getTime();
             let host = 'api.leadconnectorhq.com';
             let page_url = `https://${host}/widget/form/${form_Id}`;
             let formData = {
@@ -1079,7 +1139,7 @@
                         url: page_url,
                         title: ""
                     },
-                    timestamp: new Date().getTime(),
+                    timestamp: timet,
                     campaign: "",
                     contactSessionIds: null,
                     fbp: "",
@@ -1101,7 +1161,12 @@
             let ext = false;
             try {
                 var form = new FormData();
-                form.append(custom_field_file, file, "map_image.png");
+                if (typeof file.name == 'undefined') {
+                    file.name = timet;
+                    file.lastModified = timet;
+                }
+                name = name ?? file.name;
+                form.append(custom_field_file, file, name);
                 form.append("formData", JSON.stringify(formData));
             } catch (error) {
                 ext = true;

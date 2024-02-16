@@ -90,7 +90,7 @@
     }
 
     function addDeviceToSelect(device, selectId, hideit = '') {
-        var parent = document.querySelector('.' + selectId);
+        var parent = selectId;
         var select = parent.querySelector('select');
         var option = document.createElement('option');
         option.value = device.deviceId;
@@ -113,7 +113,7 @@
             parent.removeAttribute('hidden');
         } else if (hideit == 'video') {
             //close modal
-            show_error('No video device found');
+
         }
     }
 

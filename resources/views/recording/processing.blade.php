@@ -1,12 +1,34 @@
 <script>
     function saveRecording(video_recorder) {
         let formData = new FormData();
+        let xt = null;
         formData.append('status', video_recorder.status);
+
+        xt = video_recorder?.posterUrl ?? '';
+        if (xt == '') {
+
+        }
         formData.append('poster', video_recorder.poster);
+        formData.append('posterUrl', xt);
+        xt = video_recorder?.videoUrl ?? '';
+        if (xt == '') {
+
+        }
         formData.append('video', video_recorder.video);
-        formData.append('faceUrl', video_recorder.faceUrl);
-        formData.append('posterUrl', video_recorder.posterUrl);
-        formData.append('videoUrl', video_recorder.videoUrl);
+        formData.append('videoUrl', xt);
+        xt = video_recorder?.faceUrl ?? '';
+        if (xt == '') {
+            formData.append('face', video_recorder.face);
+        }
+        formData.append('faceUrl', xt);
+
+        xt = video_recorder?.videoOrgUrl ?? '';
+        if (xt == '') {
+            formData.append('video_orig', video_recorder.video_orig);
+        }
+        formData.append('videoOrgUrl', xt);
+
+
         formData.append('_token', "{{ csrf_token() }}");
 
         fetch("{{ route('recordings.store') }}", {

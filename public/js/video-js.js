@@ -19,14 +19,20 @@ function applyAudioWorkaround(options) {
             options.plugins.record.audioChannels = 2;
         }
     }
+    return options;
 }
 
 function applyVideoWorkaround(options) {
     // console.log('applyVideoWorkaround');
     // use correct video mimetype for opera
-    if (!!window.opera || navigator.userAgent.indexOf('OPR/') !== -1) {
-        options.plugins.record.videoMimeType = 'video/webm\;codecs=vp8'; // or vp9
+    try {
+        if (!!window.opera || navigator.userAgent.indexOf('OPR/') !== -1) {
+            options.plugins.record.videoMimeType = 'video/webm\;codecs=vp8'; // or vp9
+        }
+    } catch (error) {
+
     }
+    return options;
 }
 
 function applyScreenWorkaround() {
