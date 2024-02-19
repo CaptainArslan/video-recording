@@ -77,7 +77,7 @@
                             </div>
                         </div>
                         <div class="header" style="max-height: 250px; overflow: hidden;">
-                            <a href="${recording.short_url}" target="_blank">
+                            <a href="${recording.short_url}">
                                 <img src="${recording.poster_url || 'https://via.placeholder.com/600x400'}" alt="${title}" class="card-img-top" style="width: 100%; height: 100%; object-fit: cover;">
                             </a>
                         </div>
