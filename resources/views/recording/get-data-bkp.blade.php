@@ -58,7 +58,7 @@
                         <div class="p-3 d-flex justify-content-between align-items-center">
                             <div class="heading ">
                                 <h5 class="card-title">${title ?? 'Untitled'}</h5>
-                                <span class="text-muted" style="font-size: smaller;">${formatDate(recording.created_at) ?? ''}</span>
+                                <span class="text-muted" style="font-size: smaller;">${formatDate(recording.created_at)}</span>
                             </div>
                             <div class="dropdown">
                                 <a href="javascript:void(0)" role="button" id="action-buttons" data-toggle="dropdown" aria-expanded="false"
@@ -82,7 +82,7 @@
                             </a>
                         </div>
                         <div class="card-body">
-                            <p class="card-text">${limitDescription(recording.description, 50) ?? ''}</p>
+                            <p class="card-text">${recording.description}</p>
                             <div class="d-flex justify-content-between">
                                 <button class="btn btn-danger share" data-bs-toggle="tooltip" data-value="${recording.id}" data-toggle="modal" data-target="#share-modal" data-title="${title}" data-text="${recording.short_url ?? recording.file_url}" data-short="${recording.short_url ?? linkurl}">
                                     <i class="fa fa-share"></i> Share
@@ -92,7 +92,6 @@
                     </div>
                 </div>
                 `;
-
         });
         $('#recordings-container').html(html);
     }
@@ -105,23 +104,6 @@
             day: '2-digit'
         };
         return date.toLocaleDateString('en-US', options);
-    }
-
-
-    function limitDescription(description, maxLength) {
-        // Check if description is null or undefined
-        if (!description) {
-            return ''; // Return an empty string if description is null or undefined
-        }
-
-        // Check if the description length exceeds the maximum length
-        if (description.length > maxLength) {
-            // Return the first maxLength characters
-            return description.substring(0, maxLength) + '...';
-        } else {
-            // Otherwise, return the original description
-            return description;
-        }
     }
 
     function addDeviceToSelect(device, selectId, hideit = '') {

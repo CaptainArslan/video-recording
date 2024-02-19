@@ -62,8 +62,8 @@
 
         div#my-video-face {
             /* position: absolute;
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                z-index: 9999999;
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                bottom: 5%; */
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            z-index: 9999999;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            bottom: 5%; */
 
             overflow: hidden;
             /* border-radius: 50%; */
@@ -71,7 +71,6 @@
         }
 
         canvas#audioCanvas {
-
             height: 30px;
         }
 
@@ -159,14 +158,10 @@
 
     <!-- New Record Modal -->
     @include('recording.modal.create')
-
     <!-- edit Record Modal -->
     @include('recording.modal.edit')
-
     <!-- share Modal -->
     @include('recording.modal.share')
-
-
 @endsection
 @section('js')
     {{-- <script src="{{ asset('js/summernote.js') }}"></script> --}}
@@ -219,9 +214,6 @@
 
         let currentInstance = false;
 
-
-
-
         $(document).ready(function() {
 
             if (window.parent != window.self) {
@@ -246,33 +238,11 @@
             $('.save_video, .restart_recording, .save_recording_btn').hide();
             hideControls();
 
-            // document.querySelector('.recording').insertAdjacentHTML('afterbegin',
-            //     `<video id="my-final-source"  class="video-js vjs-default-skin mt-4 h-full w-100" ></video>`
-            // );
-
-            // setTimeout(function() {
-            //     var composite1 = new VideoStreamMerger()
-            //     composite1.addStream(player.record().stream, {
-            //         index: 0
-            //     })
-            //     composite1.addStream(player_face.record().stream, {
-            //         x: composite.width - 150,
-            //         y: composite.height - 100,
-            //         width: 150,
-            //         height: 150,
-            //         index: 3
-            //     });
-            //     composite1.start();
-            //     document.querySelector('#my-final-source').srcObject = composite1.result;
-            // }, 3000);
-
-
-
-
             let videoRtc = {
                 width: 1080,
                 height: 720
             };
+
             let video_setting_rtc = {
                 width: {
                     min: 640,
@@ -304,13 +274,12 @@
                         audio: audio_rtc,
                         // pip: pipEnabled,
                         video: video_setting_rtc,
-
                         maxLength: maxLength,
                         displayMilliseconds: false,
                         frameWidth: videoRtc.width,
                         frameHeight: videoRtc.height,
-                        // debug: true,
                         muted: false
+                        // debug: true,
                     }
                 }
             };
@@ -327,11 +296,9 @@
                         // pip: pipEnabled,
                         audio: audio_rtc,
                         video: video_setting_rtc,
-
                         maxLength: maxLength,
                         displayMilliseconds: false,
                         // debug: true,
-
                     }
                 }
             };
@@ -398,7 +365,7 @@
                     // Draw the first frame onto the canvas
                     ctx.drawImage(videoElement, 0, 0, firstFrameWidth, firstFrameHeight);
 
-                    console.log(ctx);
+                    // console.log(ctx);
 
                     // Convert the canvas content to a Blob
                     canvas.toBlob(blob => {
@@ -926,7 +893,6 @@
                                                 console.log(
                                                     'caturing first frame of the video of the main video tag'
                                                 );
-                                                displayBlob(t);
                                                 video_recorder.poster = t;
                                             });
                                     }, 1500);
@@ -1007,7 +973,8 @@
                         if (response.success == true) {
                             toastr.success(response.message);
                             loadingStop();
-                            location.reload();
+                            $('#edit-recording-modal .close').trigger('click');
+                            fetchData(1);
                         } else {
                             toastr.error('Error Occured while updating');
                         }
@@ -1065,30 +1032,29 @@
 
                 const fetchFormData = async (formData) => {
                     const data = await sendFormData(formData);
+                    console.log(data);
                     if (data?.formData && data?.field_id) {
                         // // console.log(data.formData);
                         const field = data.formData[data.field_id] ?? null;
-
                         if (field) {
                             const values = Object.values(field);
                             if (values.length > 0) {
                                 console.log(values[0].url);
                                 return values[0].url;
                             }
+                        } else {
+                            return null;
                         }
                     }
                     return null;
                 };
-
                 // console.log(video_recorder);
-
                 video_recorder.posterUrl = await fetchFormData(video_recorder.poster);
                 //x-matroska;codecs=avc1,opus
                 video_recorder.videoUrl = await fetchFormData(video_recorder.video);
                 try {
                     if (recordWithFace && player_face) {
-                        controls.log('fetching face');
-
+                        // console.log('fetching face');
                         if (video_recorder.video_orig) {
                             video_recorder.videoOrgUrl = await fetchFormData(video_recorder.video_orig);
                         }
@@ -1096,9 +1062,12 @@
                         video_recorder.faceUrl = await fetchFormData(video_recorder.face);
                     }
                 } catch (error) {
-
+                    console.error(error);
+                    return false;
                 }
                 setTimeout(function() {
+                    console.log(video_recorder);
+                    downloadImageFromBlob(video_recorder.poster, 'poster.png');
                     saveRecording(video_recorder);
                     // loadingStop();
                 }, 2500);
@@ -1107,6 +1076,23 @@
             });
             loadingStop();
         });
+
+        function downloadImageFromBlob(blob, fileName) {
+            // Create a Blob URL for the Blob object
+            const blobUrl = URL.createObjectURL(blob);
+
+            // Create a temporary anchor element
+            const anchor = document.createElement('a');
+            anchor.href = blobUrl;
+            anchor.download = fileName; // Set the download attribute to specify the filename
+
+            // Programmatically click the anchor to start downloading the image
+            document.body.appendChild(anchor);
+            anchor.click();
+
+            // Clean up by revoking the Blob URL
+            URL.revokeObjectURL(blobUrl);
+        }
 
         $("#recording-modal").on("hidden.bs.modal", function() {
             // console.log(player);

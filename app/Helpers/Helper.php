@@ -384,7 +384,7 @@ function ghl_api_call($url = '', $method = 'get', $data = '', $headers = [], $js
     }
 
     // if ($bd && isset($bd->error) && $bd->error == 'Unauthorized') {
-    if ($bd && isset($bd->error) &&  strtolower($bd->error) == 'unauthorized'  && strpos(strtolower($bd->message), 'authclass') === false) {
+    if ($bd && isset($bd->error) &&  strtolower($bd->error) == 'unauthorized') {
         request()->code = get_setting($userId, 'ghl_refresh_token');
         if (strpos($bd->message, 'access') !== false && (strpos($bd->message, 'expired') !== false || stripos($bd->message, 'invalid') !== false)) {
             if (empty(request()->code)) {

@@ -76,8 +76,8 @@ class RecordingController extends Controller
 
         // Validate the incoming request
         $validator = Validator::make($request->all(), [
-            'video' => 'required',
-            'poster' => 'required',
+            'video' => 'nullable',
+            'poster' => 'nullable',
         ]);
 
         if ($validator->fails()) {
@@ -88,8 +88,9 @@ class RecordingController extends Controller
         $recording = new Recording();
         $recording->fill([
             'user_id' => $user->id,
-            'title' => Carbon::now()->format('Y-m-d H:i:s'),
-            'description' => $request->description ?? "",
+            // 'title' => Carbon::now()->format('Y-m-d H:i:s'),
+            'title' => 'untitled',
+            'description' => $request->description,
             // 'file' =>  $request->video,
             'file_url' => $request->videoUrl,
             // 'poster' => $request->poster,
