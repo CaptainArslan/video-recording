@@ -3,9 +3,11 @@
         var ui = $.summernote.ui;
         var button = ui.button({
             contents: 'Embed Code',
-            tooltip: 'Embed Code',
+            // tooltip: 'Embed Code',
             click: function() {
-                context.invoke('editor.insertNode', iframeGen());
+                // let html = iframeGen();
+                let html = poster();
+                context.invoke('editor.insertNode', html);
             }
         });
         return button.render();
@@ -15,11 +17,11 @@
         var ui = $.summernote.ui;
         var button = ui.button({
             contents: 'Video Link',
-            tooltip: 'Video Link',
+            // tooltip: 'Video Link',
             click: function() {
                 const link = document.createElement('a');
                 link.href = videoObj.src;
-                link.setAttribute('target', '_blank');
+                // link.setAttribute('target', '_blank');
                 link.title = videoObj.title;
                 link.innerText = videoObj.title;
                 context.invoke('editor.insertNode', link);
@@ -32,7 +34,7 @@
         var ui = $.summernote.ui;
         var button = ui.button({
             contents: 'Short URL',
-            tooltip: 'Short URL',
+            // tooltip: 'Short URL',
             click: function() {
                 const link = document.createElement('a');
                 let uri = videoObj.src;
@@ -40,7 +42,7 @@
                     uri = videoObj.short;
                 }
                 link.href = uri;
-                link.setAttribute('target', '_blank');
+                // link.setAttribute('target', '_blank');
                 link.title = videoObj.title;
                 link.innerText = videoObj.title;
                 context.invoke('editor.insertNode', link);
@@ -86,7 +88,7 @@
                 'hr'
             ]], // Added 'Embeded' and 'Link' buttons
             ['view', ['fullscreen', 'codeview', 'undo', 'redo']],
-            ['custom', ['MergeButton']]
+            // ['custom', ['MergeButton']]
 
         ],
         placeholder: '',

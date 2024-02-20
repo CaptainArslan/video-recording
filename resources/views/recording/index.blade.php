@@ -60,15 +60,12 @@
             height: 200px !important;
         }
 
-        div#my-video-face {
-            /* position: absolute;
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                z-index: 9999999;
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                bottom: 5%; */
-
-            overflow: hidden;
-            /* border-radius: 50%; */
-            /* left: 4%; */
-        }
+        /* div#my-video-face {
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            position: absolute;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            z-index: 9999999;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            border-radius: 50%;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            left: 4%;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        } */
 
         canvas#audioCanvas {
             height: 30px;
@@ -279,7 +276,7 @@
                         frameWidth: videoRtc.width,
                         frameHeight: videoRtc.height,
                         muted: false
-                        // debug: true,
+                        // debug: true
                     }
                 }
             };
@@ -298,7 +295,7 @@
                         video: video_setting_rtc,
                         maxLength: maxLength,
                         displayMilliseconds: false,
-                        // debug: true,
+                        // debug: true
                     }
                 }
             };
@@ -317,8 +314,8 @@
                         recordScreen: true,
                         maxLength: maxLength,
                         displayMilliseconds: false,
-                        // debug: true,
                         muted: false
+                        // debug: true
                     }
                 }
             };
@@ -349,7 +346,7 @@
                     });
             }
 
-            applyScreenWorkaround();
+            // applyScreenWorkaround();
 
             function captureFirstFrame(videoElement) {
                 return new Promise((resolve, reject) => {
@@ -451,7 +448,6 @@
                                 screen.height = videoRtc.height;
                                 screen.fullcanvas = true;
 
-
                                 let allStreams = [screen];
 
                                 if (recordWithFace && blobs
@@ -490,17 +486,16 @@
                                     width: videoRtc.width,
                                     height: videoRtc.height
                                 };
-
                                 recorder.startRecording();
+
                             }, 500);
+
                         });
 
                         player_face.on('finishRecord', function() {
                             blobs.face = player_face.recordedData;
                         });
                     }, 500)
-
-
                 }
             }
 
@@ -672,58 +667,55 @@
                                 player.on('stop', function(element, error) {
                                     if (player_face && recordWithFace) {
                                         player_face.player_.stop()
-
                                     }
                                 });
-
                                 blobs.isScreenPause = false;
-
                                 // user clicked the record button and started recording
-
                                 player.on('startRecord', function() {
+                                    (function looper() {
+                                        if (!recorder) {
+                                            return;
+                                        }
+
+                                        var internal = recorder.getInternalRecorder();
+                                        if (internal && internal.getArrayOfBlobs) {
+                                            var blob = new Blob(internal
+                                                .getArrayOfBlobs(), {
+                                                    type: 'video/webm'
+                                                });
+
+                                            document.querySelector('h1').innerHTML =
+                                                'Recording length: ' + bytesToSize(blob
+                                                    .size);
+                                        }
+
+                                        setTimeout(looper, 1000);
+                                    })();
+
+
                                     $('.stop_recording, .pause_recording').show();
                                     // $('.start_recording').hide();
                                     // $('.save_recording_btn').hide();
-
                                     $('.main_recorder').addClass('full');
-
-
-
-
-
-
                                     blobs.screen = player.record().stream;
-
                                     addStreamStopListener(player.record().stream, function() {
-
                                         try {
                                             if (player.record()._processing) {
-
                                                 player.record().stop();
                                             }
                                             player.record()._processing = false;
                                             if (currentInstance == 'screen') {
                                                 player.record()._deviceActive = false;
                                             }
-                                        } catch (error) {
-
-                                        }
-
+                                        } catch (error) {}
                                     });
 
-
-
-
                                     $('.selection_dropdown').hide();
-
                                     if (player_face && recordWithFace) {
                                         setTimeout(function() {
                                             player_face.record().start();
-
-
                                             // setTimeout(function() {
                                             //     //player_face.exitPictureInPicture()
-
                                             //     // $('.vjs-icon-picture-in-picture-start')
                                             //     //     .trigger(
                                             //     //         'click');
@@ -731,10 +723,10 @@
                                         }, 500);
                                     }
 
-                                    setTimeout(function() {
-                                        // $('.vjs-hidden.vjs-icon-replay').removeClass(
-                                        //     'vjs-hidden');
-                                    }, 500);
+                                    // setTimeout(function() {
+                                    // $('.vjs-hidden.vjs-icon-replay').removeClass(
+                                    //     'vjs-hidden');
+                                    // }, 500);
 
                                     if ($('.custom_play').length > 0) {
                                         var myButton = player.controlBar.addChild('button', {},
@@ -747,7 +739,6 @@
                                             'vjs-icon-pause',
                                             'vjs-control', 'vjs-button');
                                         myButtonDom.onclick = function() {
-
                                             if (this.classList.contains('vjs-icon-pause')) {
                                                 this.classList.remove('vjs-icon-pause');
                                                 this.classList.add('vjs-icon-play');
@@ -1012,13 +1003,13 @@
                 videoObj.title = $(this).data('title');
                 videoObj.src = $(this).data('text');
                 videoObj.short = $(this).data('short');
+                videoObj.poster = $(this).data('poster');
                 $('.share_tabs li a').trigger('click');
                 $('#recording_id').val($(this).data('value'));
                 toogleOptions('body', $('input[name="share"]:checked').val());
                 $('#share-recording-heading').html($(this).data('title'));
                 $('#subject').val($(this).data('title'));
                 //getContacts();
-
             });
 
             $('.save_video').click(async function(e) {

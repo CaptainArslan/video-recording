@@ -17,7 +17,7 @@ class CreateShareLogsTable extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
             $table->foreignId('recording_id')->constrained('recordings')->onDelete('cascade');
-            $table->string('contact_id');
+            $table->string('contact_id')->nullable();
             $table->string('contact_name')->nullable();
             $table->string('type');
             $table->string('subject')->nullable();

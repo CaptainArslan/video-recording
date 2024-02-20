@@ -99,6 +99,11 @@ function toogleOptions(selector, value) {
     }
 }
 
+function toogleCheckbox(selector) {
+    let checked = $(selector).attr('for');
+    $(`#${checked}`).click();
+}
+
 function show_error(msg) {
     Swal.fire({
         icon: 'error',
@@ -112,11 +117,42 @@ function show_error(msg) {
 var videoObj = {
     title: 'YouTube video player',
     src: 'https://www.youtube.com/embed/bXlQ3Mw4uGc?si=GcNQKPVx13MzvbB0',
-    short: "https://www.youtube.com/embed/bXlQ3Mw4uGc?si=GcNQKPVx13MzvbB0" // I assume this is for a short URL, which isn't being used currently.
+    short: "https://www.youtube.com/embed/bXlQ3Mw4uGc?si=GcNQKPVx13MzvbB0", // I assume this is for a short URL, which isn't being used currently.
+    poster: 'https://via.placeholder.com/600x400'
 };
 
 let iframeallow =
     `accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share`;
+
+function poster() {
+    // Create div element for the header
+    var headerDiv = document.createElement('div');
+    headerDiv.classList.add('header');
+    headerDiv.style.maxHeight = '250px';
+    headerDiv.style.maxWidth = '100%';
+    // headerDiv.style.backgroundColor = 'red';
+
+    // Create anchor element
+    var anchor = document.createElement('a');
+    anchor.href = videoObj.src;
+
+    // Create image element
+    var img = document.createElement('img');
+    img.src = videoObj.poster;
+    img.alt = videoObj.title;
+    img.classList.add('card-img-top');
+    img.style.width = '100%';
+    img.style.height = '100%';
+    img.style.objectFit = 'cover';
+
+    // Append image to anchor
+    anchor.appendChild(img);
+
+    // Append anchor to header div
+    headerDiv.appendChild(anchor);
+
+    return headerDiv;
+}
 
 function iframeGen(is_html = false) {
     const iframe = document.createElement('iframe');

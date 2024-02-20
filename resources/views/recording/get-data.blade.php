@@ -78,13 +78,13 @@
                         </div>
                         <div class="header" style="max-height: 250px; overflow: hidden;">
                             <a href="${recording.short_url}">
-                                <img src="${recording.poster_url || 'https://via.placeholder.com/600x400'}" alt="${title}" class="card-img-top" style="width: 100%; height: 100%; object-fit: cover;">
+                                <img src="${recording.poster_url ?? 'https://via.placeholder.com/600x400'}" alt="${title}" class="card-img-top" style="width: 100%; height: 100%; object-fit: cover;">
                             </a>
                         </div>
                         <div class="card-body">
                             <p class="card-text">${limitDescription(recording.description, 50) ?? ''}</p>
                             <div class="d-flex justify-content-between">
-                                <button class="btn btn-danger share" data-bs-toggle="tooltip" data-value="${recording.id}" data-toggle="modal" data-target="#share-modal" data-title="${title}" data-text="${recording.short_url ?? recording.file_url}" data-short="${recording.short_url ?? linkurl}">
+                                <button class="btn btn-danger share" data-bs-toggle="tooltip" data-value="${recording.id}" data-toggle="modal" data-target="#share-modal" data-title="${title}" data-text="${recording.short_url ?? recording.file_url}" data-short="${recording.short_url ?? linkurl}" data-poster="${recording.poster_url ?? 'https://via.placeholder.com/600x400'}">
                                     <i class="fa fa-share"></i> Share
                                 </button>
                             </div>
@@ -92,7 +92,6 @@
                     </div>
                 </div>
                 `;
-
         });
         $('#recordings-container').html(html);
     }

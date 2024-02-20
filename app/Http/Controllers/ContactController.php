@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Yajra\DataTables\DataTables;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 
 class ContactController extends Controller
 {
@@ -94,15 +95,15 @@ class ContactController extends Controller
         $res = ghl_api_call('conversations/search?contactId=' . $contactid, 'GET', '', [], false, true);
         $actsend = 0;
         $conversationid = '';
-        $type = $data['type'] ?? 'email';
-        $type = strtolower($type);
+        $type = strtolower($data['type']) ?? 'email';
+        // $type = strtolower($type);
         //'WhatsApp'=>$smsTemplate,
+        Log::info('Type: ' . $type);
         $types = ['email' => ['type' => 'html', 'value' => 'Email'], 'sms' => ['type' => 'message', 'value' => 'SMS']];
         $msg = '';
         $contactName = $data['contactName'] ?? '';
         try {
             if ($res && property_exists($res, 'total')) {
-
                 if ($res->total == 0) {
                     $gh_res = ghl_api_call('conversations/', 'POST', [
                         'form_data' => [
@@ -136,8 +137,6 @@ class ContactController extends Controller
                     'form_data' => $mt
                 ]);
 
-
-
                 if ($res && property_exists($res, 'conversationId')) {
                     $actsend = 1;
                     $conversationid = $res->conversationId;
@@ -148,54 +147,52 @@ class ContactController extends Controller
         } catch (Throwable $th) {
             $msg = $th->getMessage();
         }
-        $is_saved = $data['log_id'] ?? '';
-        $shareLog = false;
+
+        // dd('share and contact share', $data);
+        // $is_saved = $data['log_id'] ?? '';
+        // $shareLog = false;
+        // dd($data);
         try {
-            if (!empty($is_saved)) {
-                $shareLog = ShareLog::find($is_saved);
-            } else {
-                $shareLog = ShareLog::where(['contact_id' => $contactid, 'recording_id' => $data['recording_id'], 'type' => $type])->first();
-            }
+            // if (!empty($is_saved)) {
+            //     $shareLog = ShareLog::find($is_saved);
+            // } else {
+            //     $shareLog = ShareLog::where(['contact_id' => $contactid, 'recording_id' => $data['recording_id'], 'type' => $type])->first();
+            // }
+            $shareLog = new ShareLog();
             $msg = substr($msg, 0, 255);
             $subject = $data['subject'] ?? "";
-            $tags = $data['all_tags'] ?? "";
-            if (strlen($tags) > 255) {
-                $tags = substr(($tags), 0, 255);
-            }
-            //dd($tags);
-            if (!$shareLog) {
-                $shareLog = new ShareLog();
-                $shareLog->user_id = $data['login_id']; //foreign user
-                $shareLog->contact_id = $contactid;
-                $shareLog->contact_name = $contactName;
-                $shareLog->type = $type;
-
-                $shareLog->body = $data['body'];
-                $shareLog->recording_id = $data['recording_id']; //foreign recording
-
-
-
-
-            }
-            $shareLog->conversation_id = $conversationid;
-            if ($subject != '') {
-                $shareLog->subject = $subject;
-            }
-            if ($tags != '') {
-                $shareLog->all_tags = $tags;
-            }
+            // $tags = $data['all_tags'] ?? "";
+            // if ($tags && strlen($tags) > 255) {
+            //     $tags = substr(($tags), 0, 255);
+            // }
+            // if (!$shareLog) {
+            // $shareLog = new ShareLog();
+            $shareLog->user_id = $data['login_id']; //foreign user
+            $shareLog->contact_id = (string) $contactid;
+            $shareLog->contact_name = (string) $contactName;
+            $shareLog->type = (string) $type;
+            $shareLog->body = (string) $data['body'];
+            $shareLog->recording_id = (string) $data['recording_id']; //foreign recording
+            // }
+            $shareLog->conversation_id = (string) $conversationid;
+            // if ($subject != '') {
+            $shareLog->subject = (string) $subject;
+            // }
+            // if ($tags != '') {
+            // $shareLog->all_tags = $tags;
+            $shareLog->all_tags = (string) $data['all_tags'] ?? "";
+            // }
             $shareLog->status = $actsend;
-            $shareLog->message = $msg;
+            $shareLog->message = (string) $msg;
             $shareLog->save();
-            if ($contactName != '') {
-                ShareLog::where(['contact_id' => $contactid])->update([
-                    'contact_name' => $contactName
-                ]);
-            }
+            // if ($contactName != '') {
+            //     ShareLog::where(['contact_id' => $contactid])->update([
+            //         'contact_name' => $contactName
+            //     ]);
+            // }
         } catch (Throwable $th) {
-
-            //dd($th);
-            //throw $th;
+            // dd($th->getMessage());
+            throw $th;
         }
         return 'Added to Process';
     }
@@ -218,7 +215,7 @@ class ContactController extends Controller
 
     function processConv(Request $req)
     {
-
+        // dd($req->all());
         $contacts = $req->contacts ?? '';
         $user = auth()->user();
         $contactCache = cache()->get('contacts' . $user->id) ?? [];

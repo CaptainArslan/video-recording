@@ -4,15 +4,17 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class ShareLog extends Model
 {
     use HasFactory;
+    use SoftDeletes;
 
     protected $guard = [];
 
     protected $fillable = [
-        'user_id', 'recording_id', 'contact_id', 'contact_name', 'type', 'subject', 'body', 'all_tags', 'status', 'conversation_id', 'message',
+        'user_id', 'recording_id', 'contact_id', 'contact_name', 'type', 'subject', 'body', 'all_tags', 'status', 'conversation_id', 'message', 'created_at', 'updated_at', 'deleted_at'
     ];
 
     public function user()
@@ -24,7 +26,6 @@ class ShareLog extends Model
     {
         return $this->belongsTo(Recording::class);
     }
-
 
     /**
      * Get the status of the share log.

@@ -33,10 +33,13 @@
                             <div class="btn-group" role="group" aria-label="Basic radio toggle button group">
                                 <input type="radio" class="btn-check" value="contacts" name="share"
                                     id="contact-label" autocomplete="off" checked>
-                                <label class="btn btn-outline-primary" for="contact-label">With Contacts</label>
+                                <label class="btn btn-outline-primary" for="contact-label"
+                                    onclick="toogleCheckbox(this)">With Contacts</label>
                                 <input type="radio" class="btn-check" value="tags" name="share" id="tag-label"
                                     autocomplete="off">
-                                <label class="btn btn-outline-primary" for="tag-label">With Tags</label>
+                                <label class="btn btn-outline-primary" for="tag-label"
+                                    onclick="toogleCheckbox(this)">With
+                                    Tags</label>
                             </div>
 
                         </div>

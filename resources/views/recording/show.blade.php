@@ -30,7 +30,7 @@
                 <source src="{{ $recording->file_url }}" type="video/mp4">
                 Your browser does not support the video tag.
             </video>
-            <p>{{ $recording->description ?? '' }}</p>
+            <p class="mt-4">{{ $recording->description ?? '' }}</p>
         </div>
     </div>
 

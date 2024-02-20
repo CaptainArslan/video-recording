@@ -61,10 +61,10 @@
             });
     }
 
-
-    $('#submitData').click(async function(e) {
+    $('#submitData').click(function(e) {
         e.preventDefault();
-        // $(this).attr('disabled', 'disabled');
+        $(this).prop('disabled', 'disabled');
+        loadingStart('Processing...');
         try {
             let tabactive = $('#sms-tab').hasClass('active') ? 'SMS' : 'Email';
             let body = '';
@@ -96,10 +96,10 @@
                 return;
             }
 
-            loadingStart('Processing...');
-
             let contactChunks = [];
             let formData = new FormData();
+
+            console.log(defChunks);
             if (action == defChunks) {
                 contactChunks = chunkArray(contacts, 50);
             } else {
@@ -118,12 +118,11 @@
             formData.forEach((value, key) => {
                 formDataObject[key] = value;
             });
-            // // console.log(contactChunks);
-            console.time();
+            // console.log(contactChunks);
+            // console.time();
+
             if (action == defChunks) {
-
                 let worker = new Worker('./js/chunksWorker.js');
-
                 worker.postMessage({
                     chunks: contactChunks,
                     data: {
@@ -144,9 +143,7 @@
                         if (data.tag != '') {
                             message += `- Tag ${data.tag}`;
                         }
-                        loadingStart(
-                            message
-                        );
+                        loadingStart(message);
                     } else {
                         $('#contact-select').val('').trigger('change');
                         $('#tag-select').val('').trigger('change');
@@ -157,20 +154,20 @@
                         loadingStop();
                     }
                 };
-                loadingStop();
+                // loadingStop();
             } else {
                 processDataShare(formData).then(x => {
                     console.timeEnd();
                     loadingStop();
-                    // // console.log(x);
+                    console.log(x);
                 }).catch(t => {
-                    // // console.log(t);
+                    console.log(t);
                     loadingStop();
                 });
             }
         } catch (error) {
-            // // console.log(error);
             loadingStop();
+            console.log(error);
         }
     });
 
