@@ -26,7 +26,8 @@ class Recording extends Model
     {
         // Access the 'created_at' attribute of the model
         $title = $this->getAttribute('title');
-        return formatTimestamp($title, 'M d, Y');
+        return $title;
+        // return formatTimestamp($title, 'M d, Y');
     }
 
     public function getEncIdAttribute()

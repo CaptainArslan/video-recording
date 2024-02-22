@@ -4,7 +4,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Share ( <span id="share-recording-heading"></span> ) </h5>
-                <button type="button" class="close btn btn-danger" data-dismiss="modal" aria-label="Close">
+                <button type="button" class="btn btn-danger close-modal" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
@@ -71,7 +71,6 @@
                                 <label for="subject">Subject</label>
                                 <input type="text" class="form-control" name="video-subject" id="subject"
                                     placeholder="Default Subject Recording">
-
                             </div>
                             <div class="col-12">
                                 <label for="video-select">Email</label>
@@ -91,12 +90,11 @@
                     </div>
 
                     {{--  Embed code --}}
-
                     <div class="tab-pane fade" id="frame" role="tabpanel" aria-labelledby="frame-tab">
                         <div class="row mt-2">
                             <div class="col-12">
                                 <label for="video-select">Copy Embed Code</label>
-                                <textarea class="form-control w-100 emded_code" name="emded_code" rows="15" readonly disabled></textarea>
+                                <textarea class="form-control w-100 emded_code" name="emded_code" rows="15" readonly></textarea>
                             </div>
                         </div>
                     </div>
@@ -104,7 +102,8 @@
             </div>
             <div class="modal-footer">
                 <div class="col-12 mt-2 share_btn">
-                    <a type="submit" id="submitData" data-action="direct" class="btn  btn-primary ">Share</a>
+                    <button type="button" id="submitData" data-action="direct"
+                        class="btn btn-primary">Share</button>
                 </div>
             </div>
         </div>

@@ -62,6 +62,8 @@ class RecordingController extends Controller
         //$recordings = Recording::where('user_id', $userId)->latest()->paginate(getPaginate());
         $fields = getVariables();
         $tableFields = getTableColumns('share_logs', ['id', 'created_at', 'updated_at', 'deleted_at', 'user_id']);
+        $tableFields = array_merge($tableFields, ['action' => 'Action']);
+        // dd($tableFields);
         return view('recording.index', get_defined_vars());
     }
 
@@ -71,7 +73,7 @@ class RecordingController extends Controller
 
         // Check if user has reached recording limit
         if ($user->plan->limit <= $user->recordings->count()) {
-            return response()->json(['success' => false, 'message' => 'You have reached your recording limit.']);
+            return response()->json(['success' => false, 'message' => 'You have reached your maximum recording limit.']);
         }
 
         // Validate the incoming request
@@ -89,7 +91,7 @@ class RecordingController extends Controller
         $recording->fill([
             'user_id' => $user->id,
             // 'title' => Carbon::now()->format('Y-m-d H:i:s'),
-            'title' => 'untitled',
+            'title' => $request->title ?? 'untitled',
             'description' => $request->description,
             // 'file' =>  $request->video,
             'file_url' => $request->videoUrl,
@@ -140,7 +142,6 @@ class RecordingController extends Controller
     {
         $user = Auth::user();
         $limit = $user->plan->limit ?? 0;
-
 
         if ($limit == 0) {
             $limit = 'Unlimited';

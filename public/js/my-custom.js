@@ -105,9 +105,25 @@ function toogleCheckbox(selector) {
 }
 
 function show_error(msg) {
+    if (swal) {
+        swal.close();
+    }
     Swal.fire({
         icon: 'error',
         title: 'Oops...',
+        text: msg,
+        timer: 2000,
+        showConfirmButton: false
+    });
+}
+
+function show_success(msg) {
+    if (swal) {
+        swal.close();
+    }
+    Swal.fire({
+        icon: 'success',
+        title: 'Success',
         text: msg,
         timer: 2000,
         showConfirmButton: false
@@ -124,35 +140,51 @@ var videoObj = {
 let iframeallow =
     `accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share`;
 
+// function poster() {
+//     // Create div element for the header
+//     var headerDiv = document.createElement('div');
+//     headerDiv.classList.add('header');
+//     headerDiv.style.maxHeight = '100%';
+//     headerDiv.style.maxWidth = '100%';
+//     // headerDiv.style.backgroundColor = 'red';
+
+//     // Create anchor element
+//     var anchor = document.createElement('a');
+//     anchor.href = videoObj.src;
+
+//     // Create image element
+//     var img = document.createElement('img');
+//     img.src = videoObj.poster;
+//     img.alt = videoObj.title;
+//     img.classList.add('card-img-top');
+//     img.style.width = '100%';
+//     img.style.height = '100%';
+//     img.style.objectFit = 'cover';
+
+//     // Append image to anchor
+//     anchor.appendChild(img);
+
+//     // Append anchor to header div
+//     headerDiv.appendChild(anchor);
+
+//     return headerDiv;
+// }
+
 function poster() {
-    // Create div element for the header
-    var headerDiv = document.createElement('div');
-    headerDiv.classList.add('header');
-    headerDiv.style.maxHeight = '250px';
-    headerDiv.style.maxWidth = '100%';
-    // headerDiv.style.backgroundColor = 'red';
-
-    // Create anchor element
-    var anchor = document.createElement('a');
-    anchor.href = videoObj.src;
-
-    // Create image element
-    var img = document.createElement('img');
-    img.src = videoObj.poster;
-    img.alt = videoObj.title;
-    img.classList.add('card-img-top');
-    img.style.width = '100%';
-    img.style.height = '100%';
-    img.style.objectFit = 'cover';
-
-    // Append image to anchor
-    anchor.appendChild(img);
-
-    // Append anchor to header div
-    headerDiv.appendChild(anchor);
-
-    return headerDiv;
+    var html = `
+        <a href="${videoObj.short}" style="text-decoration: none;">
+            <div style="width: 200px; height: 200px; position: relative; overflow: hidden;">
+                <img src="${videoObj.poster}" alt="${videoObj.title}" style="width: 100%; height: 100%; object-fit: cover;">
+                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: rgba(0, 0, 0, 0.7); width: 100%; height: 100%; display: flex; justify-content: center; align-items: center;">
+                    <i class="fa fa-play text-white" style="font-size: 30px;"></i>
+                </div>
+            </div>
+        </a>
+    `;
+    return html;
 }
+
+
 
 function iframeGen(is_html = false) {
     const iframe = document.createElement('iframe');
@@ -184,8 +216,6 @@ function iframeGen(is_html = false) {
 
     return iframe;
 }
-
-
 
 function copyLink(param) {
     let link = $(param).data('link');

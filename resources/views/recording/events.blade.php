@@ -171,7 +171,6 @@
             } else {
                 pxt.setVideoInput(src);
             }
-
         } else {
             if (currentInstance == 'video') {
                 if (src == '') {
@@ -337,6 +336,148 @@
             mediaRecorder.stop();
         }, 5000); // Stop after 5 seconds, for example
     }
+
+    function downloadVideoFromBlob(blob, filename) {
+        // Create a temporary anchor element
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        // Create a URL for the Blob
+        const url = window.URL.createObjectURL(blob);
+        // Set the anchor's href and download attributes
+        a.href = url;
+        a.download = filename || 'video.mp4';
+        // Append the anchor to the document body
+        document.body.appendChild(a);
+        // Trigger a click event on the anchor
+        a.click();
+        // Remove the anchor from the document body
+        document.body.removeChild(a);
+        // Revoke the URL to release the Blob's resources
+        window.URL.revokeObjectURL(url);
+    }
+
+
+
+    function downloadImageFromBlob(blob, fileName) {
+        // Create a Blob URL for the Blob object
+        const blobUrl = URL.createObjectURL(blob);
+
+        // Create a temporary anchor element
+        const anchor = document.createElement('a');
+        anchor.href = blobUrl;
+        anchor.download = fileName; // Set the download attribute to specify the filename
+
+        // Programmatically click the anchor to start downloading the image
+        document.body.appendChild(anchor);
+        anchor.click();
+
+        // Clean up by revoking the Blob URL
+        URL.revokeObjectURL(blobUrl);
+    }
+
+
+
+    async function calculateStreamSize(stream) {
+        const reader = stream.getReader();
+        let totalSize = 0;
+
+        try {
+            while (true) {
+                const {
+                    done,
+                    value
+                } = await reader.read();
+                if (done) break;
+                totalSize += value.length; // Assuming value is a Uint8Array or similar
+            }
+        } catch (error) {
+            console.error('Error reading stream:', error);
+        }
+
+        return totalSize;
+    }
+
+
+
+    function estimateVideoSize(videoElement) {
+        const durationInSeconds = videoElement.duration;
+        const fileSizeInBytes = videoElement.fileSize;
+        // Assuming fileSize is available in bytes
+
+        // Convert fileSize to megabytes
+        const fileSizeInMegabytes = fileSizeInBytes / (1024 *
+            1024);
+
+        return {
+            durationInSeconds,
+            fileSizeInBytes,
+            fileSizeInMegabytes
+        };
+    }
+
+
+    // $('.save_video').click(function(e) {
+    //     e.preventDefault();
+    //     loadingStart('Saving...');
+
+    //     let status = $(this).data('status');
+    //     video_recorder.status = status
+    //     const fetchFormData = async (formData) => {
+    //         const data = await sendFormData(formData);
+    //         console.log(data);
+    //         if (data?.formData && data?.field_id) {
+    //             // // console.log(data.formData);
+    //             const field = data.formData[data.field_id] ?? null;
+    //             if (field) {
+    //                 const values = Object.values(field);
+    //                 if (values.length > 0) {
+    //                     console.log(values[0].url);
+    //                     return values[0].url;
+    //                 }
+    //             } else {
+    //                 return null;
+    //             }
+    //         }
+    //         return null;
+    //     };
+
+    //     video_recorder.posterUrl = await fetchFormData(video_recorder.poster);
+
+    //     setTimeout(function() {
+    //         video_recorder.videoUrl = await fetchFormData(video_recorder.video);
+    //     }, 1000);
+
+    //     try {
+    //         if (recordWithFace && player_face) {
+    //             if (video_recorder.video_orig) {
+    //                 video_recorder.videoOrgUrl = await fetchFormData(video_recorder.video_orig);
+    //             }
+    //         }
+    //     } catch (error) {
+    //         console.error(error);
+    //         // return false;
+    //     }
+    //     setTimeout(function() {
+    //         if (video_recorder.videoUrl && video_recorder.posterUrl) {
+    //             console.log(video_recorder);
+    //             saveRecording(video_recorder);
+    //             if (player) {
+    //                 player.dispose();
+    //                 player = null;
+    //             }
+    //             if (player_face) {
+    //                 player_face.dispose();
+    //                 player_face = null;
+    //             }
+    //             if (recorder) {
+    //                 recorder.stopRecording();
+    //             }
+    //             location.reload();
+    //         }
+    //         // fetchData(1);
+    //     }, 3000);
+    //     loadingStop();
+    // });
 
     // function mergeVideos(videoElement1, videoElement2) {
 

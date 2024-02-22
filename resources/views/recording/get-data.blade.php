@@ -51,8 +51,9 @@
             let linkurl = `{{ route('recordings.show', 'link') }}`.replaceAll('link', enc_id);
             let deleteurl = `{{ route('recordings.destroy', 'link') }}`.replaceAll('link', recording.enc_id);
             // // console.log(deleteurl);
-            html +=
-                `
+            if (recording.file_url != null && recording.file_url != '') {
+                html +=
+                    `
                 <div class="col-lg-3 col-md-4 col-sm-6 mb-4 d-flex align-items-stretch">
                     <div class="card">
                         <div class="p-3 d-flex justify-content-between align-items-center">
@@ -92,6 +93,7 @@
                     </div>
                 </div>
                 `;
+            }
         });
         $('#recordings-container').html(html);
     }

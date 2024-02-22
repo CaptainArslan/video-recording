@@ -25,11 +25,6 @@ Route::get('video/{shortURLKey}', [RecordingController::class, 'showRecord']);
 Route::get('/', function () {
     return redirect()->route('login');
 });
-
-Route::get('/cache', function () {
-    dd('me hn');
-});
-
 require __DIR__ . '/auth.php';
 //
 Route::get('check/auth', [DashboardController::class, 'connect'])->name('auth.check');
@@ -59,8 +54,6 @@ Route::middleware('auth', 'auto_auth', 'is_admin')->group(function () {
     Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
     Route::post('/settings', [SettingController::class, 'store'])->name('settings.store');
     Route::get('authorization/crm/oauth/callback', [SettingController::class, 'goHighLevelCallback'])->name('authorization.gohighlevel.callback');
-    // Route::get('/loginwith/{user}', [UserController::class, 'loginWith'])->name('users.loginwith');
-    // Route::get('/backtoadmin', [UserController::class, 'backToAdmin'])->name('backtoadmin');
 });
 
 Route::middleware(['auto_auth', 'is_company'])->group(function () {
@@ -70,8 +63,8 @@ Route::middleware(['auto_auth', 'is_company'])->group(function () {
     Route::post('sendData', [ContactController::class, 'processConv'])->name('ghl.sendData');
     Route::get('tags', [ContactController::class, 'tags'])->name('ghl.tags');
     Route::get('contact/get-data', [ShareLogController::class, 'index'])->name('sharelog.data');
+
+    Route::post('sharelog/retry/{id}', [ContactController::class, 'retryLog'])->name('sharelog.retry');
 });
 
 Route::get('video/{id}', [RecordingController::class, 'showRecord'])->name('record.data');
-
-Route::get('/merge', [RecordingController::class, 'mergeVideos'])->name('recording.merge');

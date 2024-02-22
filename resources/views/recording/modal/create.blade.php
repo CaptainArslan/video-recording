@@ -4,26 +4,25 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="new-recording">Recorder</h5>
-                <button type="button" class="btn btn-danger close" data-dismiss="modal" aria-label="Close">
+                <button type="button" class="btn btn-danger close-modal" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
             <video id="my_final_video" hidden autoplay="" playsinline="" class="h-full w-100 hide"></video>
             <div class="modal-body">
                 <div class="main_recorder">
-
                     <div class="main ">
-                        <div class="recording" style="width: 100%;"></div>
-
+                        <div class="col-md-12">
+                            <label for="video-select">Title</label>
+                            <input type="text" class="form-control" name="title" value="" required="">
+                        </div>
+                        <div class="recording" style="width: 100%; max-height: 90%"></div>
                         <div class="mt-2"></div>
                         <div class="buttons save_recording_btn d-flex">
-
-                            <button type="button" role="button" class="btn btn-primary mt-4 save_video "
-                                data-status="draft">Save
-                                Draft</button>
-                            <button type="button" role="button" class="btn btn-primary mt-4 save_video "
-                                data-status="publish">Publish
-                                Video</button>
+                            <button type="button" role="button" class="btn btn-primary mt-4 save_video"
+                                data-status="draft">Save Draft</button>
+                            <button type="button" role="button" class="btn btn-primary mt-4 save_video"
+                                data-status="publish">Publish Video</button>
                         </div>
                         <div class="control-buttons d-flex mt-2">
                             <button type="button" role="button" class="btn btn-primary mt-4 start_recording"><i
@@ -55,18 +54,7 @@
                                 <audio id="microphone" autoplay></audio>
                             </div>
                         </div>
-                        <div class=" selection_dropdown">
-                            <div class=" video_selector" hidden>
-                                <label for="video-select">Select Video Device:</label>
-                                <select id="video-select" class="form-control">
-
-                                </select>
-                            </div>
-
-
-                        </div>
-
-                        <div class=" mt-1 selection_dropdown self_checkbox" hidden>
+                        <div class="mt-1 selection_dropdown self_checkbox" hidden>
                             <div class="col-md-6">
                                 <div class="form-check face_input">
                                     <input class="form-check-input" type="checkbox" name="show_face" id="show_face"
@@ -77,14 +65,15 @@
                                 </div>
                             </div>
                         </div>
-
+                        <div class="selection_dropdown">
+                            <div class=" video_selector" hidden>
+                                <label for="video-select">Select Video Device:</label>
+                                <select id="video-select" class="form-control">
+                                </select>
+                            </div>
+                        </div>
                     </div>
                 </div>
-
-                <!-- My Video -->
-
-                {{--  --}}
-
             </div>
         </div>
     </div>

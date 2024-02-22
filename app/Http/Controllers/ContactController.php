@@ -91,7 +91,6 @@ class ContactController extends Controller
 
     function convFinder($contactid, $location, $data)
     {
-
         $res = ghl_api_call('conversations/search?contactId=' . $contactid, 'GET', '', [], false, true);
         $actsend = 0;
         $conversationid = '';
@@ -102,6 +101,7 @@ class ContactController extends Controller
         $types = ['email' => ['type' => 'html', 'value' => 'Email'], 'sms' => ['type' => 'message', 'value' => 'SMS']];
         $msg = '';
         $contactName = $data['contactName'] ?? '';
+        $retry_status = 0;
         try {
             if ($res && property_exists($res, 'total')) {
                 if ($res->total == 0) {
@@ -142,75 +142,105 @@ class ContactController extends Controller
                     $conversationid = $res->conversationId;
                 }
 
+                Log::info('Message Sent: ' . $res);
+
                 $msg = $res->msg ?? $res->message ?? json_encode($res);
+                $retry_status = $res->status ?? 0;
             }
         } catch (Throwable $th) {
             $msg = $th->getMessage();
         }
 
-        // dd('share and contact share', $data);
-        // $is_saved = $data['log_id'] ?? '';
+        $is_saved = $data['log_id'] ?? '';
         // $shareLog = false;
-        // dd($data);
         try {
-            // if (!empty($is_saved)) {
-            //     $shareLog = ShareLog::find($is_saved);
-            // } else {
-            //     $shareLog = ShareLog::where(['contact_id' => $contactid, 'recording_id' => $data['recording_id'], 'type' => $type])->first();
-            // }
-            $shareLog = new ShareLog();
             $msg = substr($msg, 0, 255);
-            $subject = $data['subject'] ?? "";
-            // $tags = $data['all_tags'] ?? "";
-            // if ($tags && strlen($tags) > 255) {
-            //     $tags = substr(($tags), 0, 255);
-            // }
-            // if (!$shareLog) {
-            // $shareLog = new ShareLog();
-            $shareLog->user_id = $data['login_id']; //foreign user
-            $shareLog->contact_id = (string) $contactid;
-            $shareLog->contact_name = (string) $contactName;
-            $shareLog->type = (string) $type;
-            $shareLog->body = (string) $data['body'];
-            $shareLog->recording_id = (string) $data['recording_id']; //foreign recording
-            // }
-            $shareLog->conversation_id = (string) $conversationid;
-            // if ($subject != '') {
-            $shareLog->subject = (string) $subject;
-            // }
-            // if ($tags != '') {
-            // $shareLog->all_tags = $tags;
-            $shareLog->all_tags = (string) $data['all_tags'] ?? "";
-            // }
-            $shareLog->status = $actsend;
-            $shareLog->message = (string) $msg;
+            $tags = (string) $data['all_tags'] ?? "";
+
+            if ($tags && strlen($tags) > 255) {
+                $tags = substr(($tags), 0, 255);
+            }
+
+            if ($is_saved && !empty($is_saved)) {
+                $shareLog = ShareLog::find($is_saved);
+                Log::info('Existing ShareLog: ' . $shareLog);
+                $shareLog->conversation_id = (string) $conversationid;
+                $shareLog->message = (string) $msg;
+            } else {
+                // $shareLog = ShareLog::where(['contact_id' => $contactid, 'recording_id' => $data['recording_id'], 'type' => $type])->first();
+                $shareLog = new ShareLog();
+                Log::info('new ShareLog: ' . $shareLog);
+                $subject = $data['subject'] ?? "";
+                // $shareLog = new ShareLog();
+                $shareLog->user_id = $data['login_id']; //foreign user
+                $shareLog->contact_id = (string) $contactid;
+                $shareLog->contact_name = (string) $contactName;
+                $shareLog->type = (string) $type;
+                $shareLog->body = (string) $data['body'];
+                $shareLog->recording_id = (string) $data['recording_id']; //foreign recording
+                // if ($subject != '') {
+                $shareLog->subject = (string) $subject;
+                // }
+                // if ($tags != '') {
+                // $shareLog->all_tags = (string) $data['all_tags'] ?? "";
+                $shareLog->all_tags = $tags;
+                // }
+                $shareLog->status = $actsend;
+                $shareLog->conversation_id = (string) $conversationid;
+                $shareLog->message = (string) $msg;
+            }
             $shareLog->save();
-            // if ($contactName != '') {
-            //     ShareLog::where(['contact_id' => $contactid])->update([
-            //         'contact_name' => $contactName
-            //     ]);
-            // }
+            return [
+                'retry_status' => $retry_status,
+                'success' => true
+            ];
         } catch (Throwable $th) {
-            // dd($th->getMessage());
-            throw $th;
+            return false;
         }
-        return 'Added to Process';
     }
 
-    function retryLog($id)
+    public function retryLog(Request $request, $id)
     {
-        $log = ShareLog::with('user')->find($id);
-        if ($log) {
-            $data = [
-                'type' => $log->type,
-                'body' => $log->body,
-                'subject' => $log->subject,
-                'log_id' => $log->id
-            ];
-            $this->convFinder($log->contact_id, $log->user->location_id, $data);
-            return redirect()->back()->with('success', 'Retry Processed');
+        if ($request->ajax()) {
+            $log = ShareLog::with('user')->find($id);
+            if ($log) {
+                $data = [
+                    'type' => $log->type,
+                    'body' => $log->body,
+                    'subject' => $log->subject,
+                    'login_id' => $log->user_id,
+                    'log_id' => (int) $log->id,
+                    'recording_id' => $log->recording_id,
+                    'all_tags' => $log->all_tags,
+                ];
+                $res = $this->convFinder($log->contact_id, $log->user->location_id, $data);
+                Log::info('Retry: ' . $res);
+                if ($res && $res['retry_status']) {
+                    $log->status = 1;
+                    $log->save();
+                    return response()->json(['success' => true, 'message' => 'Resent successfully']); // Return JSON response for AJAX request
+                } else {
+                    return response()->json(['error' => 'Retry Failed'], 500); // Return JSON response for AJAX request
+                }
+            } else {
+                return response()->json(['error' => 'Record not found'], 404); // Return JSON response for AJAX request
+            }
+        } else {
+            dd('direct');
+            $log = ShareLog::with('user')->find($id);
+            if ($log) {
+                $data = [
+                    'type' => $log->type,
+                    'body' => $log->body,
+                    'subject' => $log->subject,
+                    'login_id' => $log->user_id
+                ];
+                $res = $this->convFinder($log->contact_id, $log->user->location_id, $data);
+                return redirect()->back()->with('success', 'Retry Processed');
+            } else {
+                return redirect()->back()->with('error', 'Log not found');
+            }
         }
-        return redirect()->back()->with('error', 'Log not found');
     }
 
     function processConv(Request $req)
@@ -232,6 +262,7 @@ class ContactController extends Controller
         ];
 
         $tags = explode(',', $tags) ?? [];
+
         // $sharewith = $req->share ?? 'contact';
         // if ($sharewith == 'tags') {
         //     $contacts = [];

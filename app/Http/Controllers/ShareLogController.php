@@ -19,7 +19,7 @@ class ShareLogController extends Controller
     {
         if ($request->ajax()) {
             $user = Auth::user();
-            $model = ShareLog::where('user_id', $user->id)->latest()->orderBy('id', 'DESC')->get();
+            $model = ShareLog::where('user_id', $user->id)->orderBy('id', 'DESC')->get();
 
             return DataTables::of($model)
                 ->addIndexColumn()
@@ -29,74 +29,15 @@ class ShareLogController extends Controller
                 ->editColumn('status', function ($row) {
                     return $row->status == 0 ? 'Failed' : 'Sent';
                 })
-                ->rawColumns(['status'])
+                ->addColumn('action', function ($row) {
+                    $btn = '';
+                    if ($row->status == 0) {
+                        $btn = '<a href="javascript:void(0)" class="edit btn btn-primary btn-sm resend" data-id="' . $row->id . '">Resend</a>';
+                    }
+                    return $btn;
+                })
+                ->rawColumns(['status', 'action', 'conversation_id'])
                 ->toJson();
         }
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
-    public function create()
-    {
-        //
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
-     */
-    public function store(Request $request)
-    {
-        //
-    }
-
-    /**
-     * Display the specified resource.
-     *
-     * @param  \App\Models\ShareLog  $shareLog
-     * @return \Illuminate\Http\Response
-     */
-    public function show(ShareLog $shareLog)
-    {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     *
-     * @param  \App\Models\ShareLog  $shareLog
-     * @return \Illuminate\Http\Response
-     */
-    public function edit(ShareLog $shareLog)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \App\Models\ShareLog  $shareLog
-     * @return \Illuminate\Http\Response
-     */
-    public function update(Request $request, ShareLog $shareLog)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     *
-     * @param  \App\Models\ShareLog  $shareLog
-     * @return \Illuminate\Http\Response
-     */
-    public function destroy(ShareLog $shareLog)
-    {
-        //
     }
 }

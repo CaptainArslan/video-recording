@@ -24,12 +24,12 @@ class DatabaseSeeder extends Seeder
             [
                 'user_id' => 1,
                 'key' => 'crm_client_id',
-                'value' => '65b39018a18c4da3c9e0e0aa-lruj654l',
+                'value' => '65b39018a18c4da3c9e0e0aa-lsxijd4l',
             ],
             [
                 'user_id' => 1,
                 'key' => 'crm_client_secret',
-                'value' => '38c599e8-2b63-430f-95fd-e767ac9767a9',
+                'value' => 'fec0c470-592c-4a58-aa67-5d593eb95a63',
             ],
             [
                 'user_id' => 1,

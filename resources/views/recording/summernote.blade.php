@@ -2,16 +2,16 @@
     var EmbededButton = function(context) {
         var ui = $.summernote.ui;
         var button = ui.button({
-            contents: 'Embed Code',
-            // tooltip: 'Embed Code',
+            contents: 'Embed Poster',
             click: function() {
-                // let html = iframeGen();
-                let html = poster();
-                context.invoke('editor.insertNode', html);
+                let html = poster(); // Call the poster function to generate HTML
+                var $node = $(html); // Convert the HTML string to jQuery object
+                context.invoke('editor.insertNode', $node[0]); // Insert the HTML node into the editor
             }
         });
         return button.render();
     }
+
 
     let LinkButton = function(context) {
         var ui = $.summernote.ui;
