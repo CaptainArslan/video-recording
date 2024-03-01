@@ -172,15 +172,19 @@ let iframeallow =
 
 function poster() {
     var html = `
-        <a href="${videoObj.short}" style="text-decoration: none;">
-            <div style="width: 200px; height: 200px; position: relative; overflow: hidden;">
-                <img src="${videoObj.poster}" alt="${videoObj.title}" style="width: 100%; height: 100%; object-fit: cover;">
-                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: rgba(0, 0, 0, 0.7); width: 100%; height: 100%; display: flex; justify-content: center; align-items: center;">
-                    <i class="fa fa-play text-white" style="font-size: 30px;"></i>
+            <a href="${videoObj.short}" style="text-decoration: none;">
+                <div style="width: 200px; height: 200px; position: relative; overflow: hidden;">
+                    <img src="${videoObj.poster}" alt="${videoObj.title}" style="width: 100%; height: 100%; object-fit: cover;">
+                    <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.7); display: flex; justify-content: center; align-items: center;">
+                        <a href="${videoObj.short}" style="text-decoration: none;">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width: 50px; height: 50px;">
+                                <path d="M3 22v-20l18 10-18 10z" fill="#ffffff"/>
+                            </svg>
+                        </a>
+                    </div>
                 </div>
-            </div>
-        </a>
-    `;
+            </a>
+        `;
     return html;
 }
 
