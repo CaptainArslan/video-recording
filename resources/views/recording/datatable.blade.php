@@ -90,7 +90,6 @@
         });
     });
 
-
     function deleteRecordAjax(url) {
         return new swal({
             title: 'Are you sure?',
@@ -111,9 +110,11 @@
                     success: function(data) {
                         if (data.success == true) {
                             toastr.success(data.message);
-                            setTimeout(() => {
-                                location.reload();
-                            }, 1000);
+                            // setTimeout(() => {
+                            //     location.reload();
+                            // }, 1000);
+                            // table.ajax.reload();
+                            fetchData(1);
                         } else {
                             toastr.error('Error Occured while deleteing record!');
                         }
@@ -125,6 +126,49 @@
                         }
                         // console.log(message);
                         toastr.error('Error Occured while deleteing record!');
+                    }
+                });
+            }
+        });
+    }
+
+    function statusRecordAjax(param, url) {
+        return new swal({
+            title: 'Are you sure?',
+            text: '',
+            icon: 'info',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Yes, confirm!'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.ajax({
+                    type: 'PUT',
+                    url: url,
+                    data: {
+                        _token: "{{ csrf_token() }}",
+                        status: $(param).data('status')
+                    },
+                    success: function(data) {
+                        if (data.success == true) {
+                            toastr.success(data.message);
+                            // setTimeout(() => {
+                            //     location.reload();
+                            // }, 1000);
+                            // table.ajax.reload();
+                            fetchData(1);
+                        } else {
+                            toastr.error('Error Occured while pulishing record!');
+                        }
+                    },
+                    error: function(error) {
+                        let message = 'Network error';
+                        if (error.responseJSON) {
+                            message = error.responseJSON.message
+                        }
+                        // console.log(message);
+                        toastr.error('Error Occured while pulishing record!');
                     }
                 });
             }

@@ -44,7 +44,6 @@
         });
     }
 
-
     function startRecord(audioSource) {
         let canvas = document.querySelector('#audioCanvas');
         if (audioSource == '' || !audioSource) {
@@ -238,6 +237,7 @@
             $('.restart_recording').hide();
         }, 500);
     }
+
     $('.stop_recording').click(function(e) {
         e.preventDefault();
 
@@ -356,8 +356,6 @@
         window.URL.revokeObjectURL(url);
     }
 
-
-
     function downloadImageFromBlob(blob, fileName) {
         // Create a Blob URL for the Blob object
         const blobUrl = URL.createObjectURL(blob);
@@ -374,8 +372,6 @@
         // Clean up by revoking the Blob URL
         URL.revokeObjectURL(blobUrl);
     }
-
-
 
     async function calculateStreamSize(stream) {
         const reader = stream.getReader();
@@ -397,8 +393,6 @@
         return totalSize;
     }
 
-
-
     function estimateVideoSize(videoElement) {
         const durationInSeconds = videoElement.duration;
         const fileSizeInBytes = videoElement.fileSize;
@@ -414,7 +408,6 @@
             fileSizeInMegabytes
         };
     }
-
 
     // $('.save_video').click(function(e) {
     //     e.preventDefault();
@@ -480,20 +473,15 @@
     // });
 
     // function mergeVideos(videoElement1, videoElement2) {
-
     //     const merger = new VideoStreamMerger();
-
     //     const canvas = document.createElement('canvas');
     //     const ctx = canvas.getContext('2d');
     //     canvas.width = videoElement1.videoWidth + videoElement2.videoWidth;
     //     canvas.height = Math.max(videoElement1.videoHeight, videoElement2.videoHeight);
-
     //     const mergedVideoElement = document.createElement('video');
     //     mergedVideoElement.setAttribute('playsinline', '');
     //     mergedVideoElement.setAttribute('class', 'video-js vjs-default-skin mt-4 h-full w-100');
-
     //     merger.result = mergedVideoElement.captureStream();
-
     //     // Add the first video element to merger
     //     merger.addMediaElement(videoElement1.id, videoElement1, {
     //         x: 0,
@@ -582,5 +570,52 @@
     //     img.src = URL.createObjectURL(blob);
     //     // Append the image element to the document body or any other container element
     //     document.body.appendChild(img);
+    // }
+
+
+
+    // async function calculateStreamSize(stream) {
+    //     if (stream) {
+    //         // Create a MediaRecorder to record the stream
+    //         const mediaRecorder = new MediaRecorder(stream);
+
+    //         // Create a Promise to capture the recorded Blob
+    //         const recordedBlobPromise = new Promise((resolve, reject) => {
+    //             const recordedBlobs = [];
+    //             mediaRecorder.ondataavailable = event => {
+    //                 if (event.data && event.data.size > 0) {
+    //                     recordedBlobs.push(event.data);
+    //                 }
+    //             };
+
+    //             mediaRecorder.onstop = () => {
+    //                 const combinedBlob = new Blob(recordedBlobs, {
+    //                     type: mediaRecorder.mimeType
+    //                 });
+    //                 resolve(combinedBlob);
+    //             };
+
+    //             mediaRecorder.onerror = error => {
+    //                 reject(error);
+    //             };
+    //         });
+
+    //         // Start recording
+    //         mediaRecorder.start();
+
+    //         // Wait for recording to finish
+    //         await new Promise(resolve => setTimeout(resolve, 1000)); // Adjust timeout as needed
+
+    //         // Stop recording
+    //         mediaRecorder.stop();
+
+    //         // Get the recorded Blob
+    //         const recordedBlob = await recordedBlobPromise;
+
+    //         // Calculate and return the size of the Blob
+    //         return recordedBlob.size;
+    //     }
+
+    //     return 0;
     // }
 </script>

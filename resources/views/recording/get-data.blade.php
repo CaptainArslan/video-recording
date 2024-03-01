@@ -24,6 +24,7 @@
     }
 
     function fetchData(page = 1) {
+        loadingStart();
         $.ajax({
             url: "{{ route('recording.data') }}",
             method: 'GET',
@@ -36,9 +37,11 @@
                         `<h3 class="card-title fw-semibold text-center no_recording">No recording available!</h3>`
                     );
                 } else {
+                    $('#user_rec').html(response.data.total);
                     renderData(response.data.data);
                     renderPagination(response.data);
                 }
+                loadingStop();
             }
         });
     }
@@ -50,16 +53,17 @@
             let enc_id = recording.enc_id;
             let linkurl = `{{ route('recordings.show', 'link') }}`.replaceAll('link', enc_id);
             let deleteurl = `{{ route('recordings.destroy', 'link') }}`.replaceAll('link', recording.enc_id);
+            let statusurl = `{{ route('recording.status', 'link') }}`.replaceAll('link', recording.enc_id);
             // // console.log(deleteurl);
-            if (recording.file_url != null && recording.file_url != '') {
-                html +=
-                    `
+            // if (recording.file_url != null && recording.file_url != '') {
+            html +=
+                `
                 <div class="col-lg-3 col-md-4 col-sm-6 mb-4 d-flex align-items-stretch">
                     <div class="card">
                         <div class="p-3 d-flex justify-content-between align-items-center">
                             <div class="heading ">
-                                <h5 class="card-title">${title ?? 'Untitled'}</h5>
-                                <span class="text-muted" style="font-size: smaller;">${formatDate(recording.created_at) ?? ''}</span>
+                                <h5 class="card-title">${title ?? 'Untitled'} </h5>
+                                <span class="text-muted" style="font-size: smaller;">${formatDate(recording.created_at) ?? ''}  ( ${recording.status} )</span>
                             </div>
                             <div class="dropdown">
                                 <a href="javascript:void(0)" role="button" id="action-buttons" data-toggle="dropdown" aria-expanded="false"
@@ -74,7 +78,15 @@
                                         onclick="copyLink(this)">Copy</a>
                                     <a class="dropdown-item" href="javascript:void(0)" data-bs-toggle="tooltip" title="Delete Record"
                                         onclick='deleteRecordAjax("${deleteurl}")'>Delete</a>
-                                </div>
+                                        `;
+            if (recording.status == 'draft') {
+                html += `<a class="dropdown-item" href="javascript:void(0)" data-bs-toggle="tooltip" title="Delete Record" data-status="publish"
+                                        onclick='statusRecordAjax(this, "${statusurl}")'>Publish</a>`
+            } else {
+                html += `<a class="dropdown-item" href="javascript:void(0)" data-bs-toggle="tooltip" title="Delete Record" data-status="draft"
+                                        onclick='statusRecordAjax(this, "${statusurl}")'>Draft</a>`
+            }
+            html += `</div>
                             </div>
                         </div>
                         <div class="header" style="max-height: 250px; overflow: hidden;">
@@ -93,7 +105,7 @@
                     </div>
                 </div>
                 `;
-            }
+            // }
         });
         $('#recordings-container').html(html);
     }

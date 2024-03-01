@@ -132,7 +132,7 @@ class UserController extends Controller
 
     public function profile(Request $request)
     {
-        $this->skip = array_merge($this->skip, ['status', 'role', 'password']);
+        $this->skip = array_merge($this->skip, ['status', 'role', 'password', 'plan_id']);
         $formFields = getFormFields(self::TABLE, $this->skip, Auth::user());
 
         $passwordFields = $this->getPasswordFields();

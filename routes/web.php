@@ -59,12 +59,17 @@ Route::middleware('auth', 'auto_auth', 'is_admin')->group(function () {
 Route::middleware(['auto_auth', 'is_company'])->group(function () {
     Route::resource('recordings', RecordingController::class);
     Route::get('recording/get-data', [RecordingController::class, 'getData'])->name('recording.data');
+
+    Route::put('recording/publish/{id}', [RecordingController::class, 'publish'])->name('recording.status');
+
     Route::get('contact', [ContactController::class, 'contacts'])->name('ghl.contacts');
     Route::post('sendData', [ContactController::class, 'processConv'])->name('ghl.sendData');
     Route::get('tags', [ContactController::class, 'tags'])->name('ghl.tags');
     Route::get('contact/get-data', [ShareLogController::class, 'index'])->name('sharelog.data');
-
     Route::post('sharelog/retry/{id}', [ContactController::class, 'retryLog'])->name('sharelog.retry');
+
+    Route::post('upload-chunks', [RecordingController::class, 'uploadChunks'])->name('upload-video-chunk');
+    Route::post('upload-poster', [RecordingController::class, 'uploadPoster'])->name('upload.poster');
 });
 
 Route::get('video/{id}', [RecordingController::class, 'showRecord'])->name('record.data');

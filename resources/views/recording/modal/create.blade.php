@@ -28,8 +28,7 @@
                             <button type="button" role="button" class="btn btn-primary mt-4 start_recording"><i
                                     class="fa fa-play"></i>
                                 &nbsp;&nbsp; Start Recording</button>
-                            <button type="button" role="button" class="btn btn-primary mt-4 restart_recording "
-                                data-status="draft">Restart
+                            <button type="button" role="button" class="btn btn-primary mt-4 restart_recording">Restart
                                 Recording</button>
                             <button type="button" role="button" class="btn btn-secondary mt-4 pause_recording"><i
                                     class="fa fa-pause"></i>

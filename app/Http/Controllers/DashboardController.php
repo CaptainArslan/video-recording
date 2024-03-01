@@ -94,11 +94,7 @@ class DashboardController extends Controller
                     $user->plan_id = $plan->id;
                     $user->role = 1;
                     // $user->save();
-
                     $user->save();
-
-
-
                 }
                 $user->ghl_api_key = $req->token;
                 $user->save();
@@ -114,7 +110,7 @@ class DashboardController extends Controller
                     'user_loc' => $user->location_id,
                 ]);
 
-                Cache::put('user_ids321', $user->id, 120);
+                // Cache::put('user_ids321', $user->id, 120);
                 Auth::login($user);
                 $res = new \stdClass;
                 $res->user_id = $user->id;

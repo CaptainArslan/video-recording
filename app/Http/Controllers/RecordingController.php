@@ -4,14 +4,17 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Models\Recording;
+use App\Models\UploadedBlob;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Auth\Events\Login;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use AshAllenDesign\ShortURL\Classes\Builder;
 use AshAllenDesign\ShortURL\Models\ShortURL;
-
 
 class RecordingController extends Controller
 {
@@ -124,8 +127,6 @@ class RecordingController extends Controller
         return response()->json(['success' => false, 'message' => 'Error occurred while creating recording']);
     }
 
-
-
     public function show($id)
     {
         try {
@@ -194,7 +195,6 @@ class RecordingController extends Controller
         }
     }
 
-
     public function destroy($id)
     {
         try {
@@ -209,7 +209,6 @@ class RecordingController extends Controller
         return response()->json(['success' => true, 'message' => 'Recording deleted successfully.']);
     }
 
-
     public function showRecord($id)
     {
         $url = env('APP_URL') . '/' . config('short-url.prefix') . '/' . $id;
@@ -220,5 +219,189 @@ class RecordingController extends Controller
         }
 
         return view('recording.show', compact('recording'));
+    }
+
+    // public function uploadChunks(Request $request)
+    // {
+    //     // Retrieve the uploaded file chunk from the request
+    //     $fileChunk = $request->file('videoChunk');
+    //     $originalFilename = time() . '_' . $fileChunk->getClientOriginalName();
+    //     $chunkIndex = $request->input('chunkIndex');
+
+    //     // Define the directory to store the file chunks
+    //     $directory = 'video_chunks/' . $originalFilename;
+
+    //     // Ensure the directory exists
+    //     Storage::makeDirectory($directory);
+
+    //     // Store the chunk
+    //     $chunkPath = $fileChunk->storeAs($directory, "{$chunkIndex}.part");
+
+    //     // Check if this is the last chunk
+    //     $lastChunkIndex = $request->input('lastChunkIndex');
+    //     // dd($chunkPath);
+    //     if ($chunkIndex == $lastChunkIndex) {
+    //         // All chunks have been uploaded, concatenate them into a single file
+    //         $filePath = 'videos/' . $originalFilename;
+    //         $chunkFiles = Storage::files($directory);
+
+    //         Log::info('Chunk files: ' . json_encode($chunkFiles));
+    //         // Open the destination file
+    //         $destination = fopen(storage_path('app/' . $filePath), 'wb');
+
+    //         // Concatenate the chunk files
+    //         foreach ($chunkFiles as $chunkFile) {
+    //             Log::info('Chunk file: ' . $chunkFile);
+    //             Log::info('Destination: ' . $destination);
+    //             fwrite($destination, file_get_contents(storage_path('app/' . $chunkFile)));
+    //         }
+
+    //         // Close the destination file
+    //         fclose($destination);
+
+    //         // Delete the chunk directory
+    //         Storage::deleteDirectory($directory);
+
+    //         // Return success response
+    //         return response()->json(['success' => true, 'file_path' => $filePath]);
+    //     }
+
+    //     // Return success response for the chunk
+    //     return response()->json(['success' => true, 'chunk_path' => $chunkPath]);
+    // }
+
+    // public function chunksUploads($service, $request, $parentFolder)
+    // {
+    //     $file = $request->file('chunk');
+    //     $fileName = $request->get('name');
+    //     $chunkNumber = $request->get('chunkNumber');
+    //     $totalChunks = $request->get('totalChunks');
+
+    //     $filePath = storage_path('app/temp/' . $fileName . '_' . $chunkNumber);
+    //     $file->move(storage_path('app/temp'), $filePath);
+
+    //     if ($chunkNumber == $totalChunks) {
+    //         $outputFilePath = storage_path('app' . DIRECTORY_SEPARATOR . 'upload' . DIRECTORY_SEPARATOR . $fileName);
+    //         // Merge the chunks into a single file
+    //         $upimage = $this->mergeChunks($fileName, $outputFilePath, $totalChunks);
+    //         $this->saveToGDrive11($service, $fileName, $upimage, $parentFolder, $request->desc ?? '');
+    //         // Clear temporary chunks
+    //         $this->clearTempChunks($fileName, $totalChunks);
+    //     }
+    // }
+
+    public function uploadChunks(Request $request)
+    {
+        try {
+            $file = $request->file('videoChunk');
+            if (!$file) {
+                throw new \Exception('No file uploaded.');
+            }
+
+            $fileName = 'blob'; // Unique file name for the blob
+            $chunkNumber = $request->get('chunkIndex');
+            $totalChunks = $request->get('lastChunkIndex');
+            $randomFolder = $request->get('randomFolder');
+
+            // Create a directory for storing chunk files if it doesn't exist
+            $tempDirectory = storage_path('app/temp/' . $randomFolder);
+            if (!file_exists($tempDirectory) && !mkdir($tempDirectory, 0777, true)) {
+                throw new \Exception('Failed to create temp directory.');
+            }
+
+            // Move the uploaded chunk file to the temporary directory
+            if (!$file->move($tempDirectory, $fileName . '_' . $chunkNumber)) {
+                throw new \Exception('Failed to move uploaded file to temp directory.');
+            }
+
+            // Check if all chunks have been uploaded
+            if ($chunkNumber == $totalChunks) {
+                // Path for storing the complete blob file
+                $outputFilePath = storage_path('app/temp/' . $randomFolder . '/' . $fileName);
+
+                // Merge the chunks into a single file
+                $url =  $this->mergeBlobChunks($fileName, $outputFilePath, $totalChunks, $randomFolder);
+
+                // Clear temporary chunk files
+                $this->clearTempChunks($fileName, $totalChunks, $randomFolder);
+
+                return response()->json(['success' => true, 'status' => "sent", 'message' => 'File uploaded successfully', 'data' => $url]);
+            } else {
+                return response()->json(['status' => "sending", 'message' => 'Chunk uploaded successfully']);
+            }
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()]);
+        }
+    }
+
+    public function mergeBlobChunks($fileName, $outputFilePath, $totalChunks, $randomFolder)
+    {
+        $outputFile = fopen($outputFilePath, 'ab');
+
+        for ($i = 1; $i <= $totalChunks; $i++) {
+            $chunkData = file_get_contents(storage_path("app/temp/{$randomFolder}/{$fileName}_{$i}"));
+            fwrite($outputFile, $chunkData);
+        }
+
+        fclose($outputFile);
+
+        $fileName = time();
+        // Move the merged file to the public/uploads/recording directory
+        $newFilePath = public_path("uploads/recording/" . $fileName);
+        rename($outputFilePath, $newFilePath);
+
+        // Clear temporary chunks
+        // $this->clearTempBlobChunks($fileName, $totalChunks, $randomFolder);
+        return  env('APP_URL') . '/uploads/recording/' . $fileName;
+    }
+
+    // Clear temporary chunks
+    private function clearTempChunks($fileName, $totalChunks, $randomFolder)
+    {
+        for ($i = 1; $i <= $totalChunks; $i++) {
+            $chunkFilePath = storage_path("app/temp/{$randomFolder}/{$fileName}_{$i}");
+            if (file_exists($chunkFilePath)) {
+                unlink($chunkFilePath); // Delete the chunk file
+            }
+        }
+        // Remove the temporary folder
+        rmdir(storage_path("app/temp/{$randomFolder}"));
+    }
+
+    public function uploadPoster(Request $request)
+    {
+        $file = $request->file('poster');
+        $fileName = time() . '_' . $file->getClientOriginalName();
+
+        $folder = public_path('uploads/poster');
+
+        if (!file_exists($folder)) {
+            mkdir($folder, 0777, true);
+        }
+
+        $file->move($folder, $fileName);
+        return response()->json(['success' => true, 'message' => 'Poster uploaded successfully', 'data' => env('APP_URL') . '/uploads/poster/' . $fileName]);
+    }
+
+    public function publish(Request $request, $id)
+    {
+        $validator = Validator::make($request->all(), [
+            'status' => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'message' => $validator->errors()->first()]);
+        }
+
+        try {
+            $id = decrypt($id);
+        } catch (\Throwable $th) {
+            return response()->json(['success' => false, 'message' => 'Error Occured while fetching recording.']);
+        }
+
+        $recording = Recording::findOrFail($id);
+        $recording->status = $request->status;
+        $recording->save();
+        return response()->json(['success' => true, 'message' => 'Recording published successfully!',  'data' => $recording]);
     }
 }
