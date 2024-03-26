@@ -92,6 +92,10 @@
             <!-- <a href="javascript:void(0)" class="btn btn-primary"> New Video </a> -->
             <div class="dropdown">
                 @if ($recordMore)
+                    <button class="btn btn-primary " type="button" id="upload" data-toggle="modal"
+                        data-target="#upload-video-modal">
+                        Upload Video
+                    </button>
                     <button class="btn btn-primary dropdown-toggle" type="button" id="dropdownMenuButton"
                         data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                         New Video
@@ -146,6 +150,8 @@
         </div>
     </div>
 
+    <!-- Upload Video Modal -->
+    @include('recording.modal.upload')
     <!-- New Record Modal -->
     @include('recording.modal.create')
     <!-- edit Record Modal -->
@@ -158,15 +164,25 @@
     {{-- <script src="https://cdn.jsdelivr.net/npm/video-stream-merger@4.0.1/dist/video-stream-merger.min.js"></script> --}}
 
 
+
+
     <script src="https://www.webrtc-experiment.com/RecordRTC.js"></script>
     <script src="https://www.webrtc-experiment.com/MultiStreamsMixer.js"></script>
     <script src="https://www.webrtc-experiment.com/common.js"></script>
     <script src="https://www.webrtc-experiment.com/EBML.js"></script>
 
     <script src="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.js"></script>
+
     @include('partials.datatable-js')
     @include('recording.summernote')
+
     <script src="{{ asset('js/video-stream-merger.js') }}"></script>
+
+    {{-- video js options --}}
+    <script src="{{ asset('js/video-js.js') }}"></script>
+
+    {{-- Gif Js --}}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js"></script>
 
     <script>
         var player = null;
@@ -197,11 +213,9 @@
             status: 'draft'
         };
 
-
         if (window.self == window.parent && is_company) {
             document.querySelector('body').classList.remove('iframe');
         }
-
 
         $(document).ready(function() {
 
@@ -252,6 +266,7 @@
             let audio_rtc = {
                 echoCancellation: true
             };
+
             //userinactive
             let video = {
                 controls: true,
@@ -346,27 +361,107 @@
                     });
             }
 
+            // function captureFirstFrame(videoElement) {
+            //     return new Promise((resolve, reject) => {
+            //         const canvas = document.createElement('canvas');
+            //         const ctx = canvas.getContext('2d');
+            //         const firstFrameWidth = videoElement.videoWidth;
+            //         const firstFrameHeight = videoElement.videoHeight;
+            //         // Set canvas dimensions to match video
+            //         canvas.width = firstFrameWidth;
+            //         canvas.height = firstFrameHeight;
+            //         // Draw the first frame onto the canvas
+            //         ctx.drawImage(videoElement, 0, 0, firstFrameWidth, firstFrameHeight);
+            //         // Convert the canvas content to a Blob
+            //         canvas.toBlob(blob => {
+            //             if (!blob) {
+            //                 reject(new Error('Failed to capture frame as Blob'));
+            //                 return;
+            //             }
+            //             resolve(blob);
+            //         }, 'image/png');
+            //     });
+            // }
+
             function captureFirstFrame(videoElement) {
                 return new Promise((resolve, reject) => {
                     const canvas = document.createElement('canvas');
                     const ctx = canvas.getContext('2d');
-                    const firstFrameWidth = videoElement.videoWidth;
-                    const firstFrameHeight = videoElement.videoHeight;
-                    // Set canvas dimensions to match video
-                    canvas.width = firstFrameWidth;
-                    canvas.height = firstFrameHeight;
-                    // Draw the first frame onto the canvas
-                    ctx.drawImage(videoElement, 0, 0, firstFrameWidth, firstFrameHeight);
-                    // Convert the canvas content to a Blob
-                    canvas.toBlob(blob => {
-                        if (!blob) {
-                            reject(new Error('Failed to capture frame as Blob'));
-                            return;
+                    const frameWidth = videoElement.videoWidth;
+                    const frameHeight = videoElement.videoHeight;
+
+                    // Set canvas dimensions to match video frame
+                    canvas.width = frameWidth;
+                    canvas.height = frameHeight;
+
+                    const fps = 10; // Frames per second for GIF
+
+                    const startTime = 0; // Default start time
+                    const endTime = videoElement.duration ||
+                        5; // Default end time or 5 seconds if duration is not available
+
+                    const startFrameTime = startTime * fps;
+                    const endFrameTime = endTime * fps;
+
+                    let currentFrameTime = 0;
+
+                    // Function to draw and capture frames
+                    function drawAndCaptureFrame() {
+                        // Calculate current time in seconds
+                        const currentTime = currentFrameTime / fps;
+
+                        // Check if current time is within the specified range
+                        if (currentTime >= startTime && currentTime <= endTime) {
+                            // Draw the current frame onto the canvas
+                            ctx.drawImage(videoElement, 0, 0, frameWidth, frameHeight);
+
+                            // Add current frame to the GIF
+                            gif.addFrame(canvas, {
+                                copy: true,
+                                delay: 1 / fps
+                            });
                         }
+
+                        // Move to the next frame
+                        currentFrameTime++;
+
+                        // If not reached the end frame, continue capturing frames
+                        if (currentFrameTime <= endFrameTime) {
+                            // Move the video to the next frame
+                            videoElement.currentTime = currentFrameTime / fps;
+
+                            // Request next frame
+                            requestAnimationFrame(drawAndCaptureFrame);
+                        } else {
+                            // Render the GIF
+                            gif.render();
+                        }
+                    }
+
+
+                    // Create a new GIF instance
+                    const gif = new GIF({
+                        workers: 2,
+                        quality: 10
+                    });
+
+                    // Start capturing frames from the video
+                    videoElement.currentTime = startTime;
+                    videoElement.play();
+                    drawAndCaptureFrame();
+
+                    // When GIF rendering is finished, resolve the promise with the blob
+                    gif.on('finished', blob => {
                         resolve(blob);
-                    }, 'image/png');
+                    });
+
+                    // If any error occurs during GIF rendering, reject the promise
+                    gif.on('error', error => {
+                        reject(error);
+                    });
                 });
             }
+
 
             function recordUserFace() {
                 delete blobs.camera;
@@ -380,10 +475,9 @@
                             player_face.dispose();
                             player_face = null;
                         }
-                    } catch (error) {}
-                    // document.querySelector('.self_checkbox').insertAdjacentHTML('beforeEnd',
-                    //     `<video id="my-video-face" hidden src="" playsinline class="video-js hide vjs-default-skin mt-4 h-full w-100" ></video>`
-                    // );
+                    } catch (error) {
+                        console.error(error);
+                    }
 
                     $('.self_checkbox').after(
                         `<video id="my-video-face" hidden src="" playsinline class="video-js hide vjs-default-skin mt-4 h-100 w-100"></video>`
@@ -464,8 +558,6 @@
                                 recorder.startRecording();
                             }, 1500);
                         });
-
-
                         player_face.on('finishRecord', function() {
                             blobs.face = player_face.recordedData;
                         });
@@ -816,11 +908,12 @@
                                     video_recorder.video = player.recordedData;
 
                                     setTimeout(function() {
-                                        captureFirstFrame(document.querySelector(
-                                            '#my-video #my-video_html5_api')).then(
-                                            t => {
-                                                video_recorder.poster = t;
-                                            });
+                                        // captureFirstFrame(document.querySelector(
+                                        //     '#my-video #my-video_html5_api')).then(
+                                        //     t => {
+                                        //         console.log(t);
+                                        //         video_recorder.poster = t;
+                                        //     });
                                     }, 1500);
 
                                 });
@@ -941,12 +1034,68 @@
                 $('#subject').val($(this).data('title'));
             });
 
+            $('body').on('change', '#select-video', function(e) {
+                e.preventDefault();
+                let file = e.target.files[0];
+                console.log(file);
+                $('#uploaded_video source').attr('src', URL.createObjectURL(file));
+                let video = $('#uploaded_video')[0];
+
+                console.log('Duration:', video.duration);
+
+                if (video) {
+                    // video.onloadedmetadata = function() {
+                    let durationMinutes = video.duration / 60; // Convert duration to minutes
+                    console.log('Duration in minutes:', durationMinutes.toFixed(
+                        2)); // Display duration in minutes
+                    if (durationMinutes > maxLength) {
+                        toastr.error('File duration is greater than the allowed duration');
+                    } else {
+                        toastr.success('File duration is within the allowed duration');
+                    }
+                    // };
+                }
+            });
+
+
+            // $('.upload_video ').click(function(e) {
+            //     e.preventDefault();
+            //     alert('upload video');
+
+            //     captureFirstFrame(document.querySelector(
+            //         '#my-video #my-video_html5_api')).then(
+            //         t => {
+            //             console.log(t);
+            //             video_recorder.poster = t;
+            //         });
+
+
+            //     let title = $('input[name="title"]').val();
+            //     if (title == '') {
+            //         toastr.error('Title is required');
+            //         return;
+            //     }
+
+            //     video_recorder.title = title;
+
+            //     let status = $(this).data('status');
+            //     video_recorder.status = status;
+
+            //     if (video_recorder.video && video_recorder.poster) {
+            //         toastr.success('Video saved successfully');
+            //         // saveRecording(video_recorder);
+            //     } else {
+            //         toastr.error('Error occurred while saving. Please try again.');
+            //     }
+            // });
+
             $('.save_video').click(async function(e) {
                 e.preventDefault();
                 // $('.save_video').html('Loading...').addClass('disabled');
 
                 // Get the title input value
-                let title = $('input[name="title"]').val();
+                let title = $('input[name="title"]').val() ?? $(
+                    'input[name="video_title"]').val();
 
                 // Check if title is empty
                 if (title == '') {
@@ -956,9 +1105,17 @@
 
                 loadingStart('Saving...');
 
-                let status = $(this).data('status');
+                captureFirstFrame(document.querySelector(
+                    '#my-video #my-video_html5_api')).then(
+                    t => {
+                        video_recorder.poster = t;
+                    });
+
+                // let status =
                 video_recorder.title = title;
-                video_recorder.status = status;
+                video_recorder.status = $(this).data('status');
+
+                console.log(video_recorder);
 
                 const fetchFormData = async (formData) => {
                     const data = await sendFormData(formData);
@@ -974,14 +1131,20 @@
                     return null;
                 };
 
-
                 // code to upload poster
                 if (localUpload) {
                     uploadPoster(video_recorder.poster)
                         .then((responseData) => {
-                            video_recorder.posterUrl = responseData;
+                            if (responseData) {
+                                video_recorder.posterUrl = responseData;
+                            } else {
+                                toastr.error(
+                                    'Error occurred while uploading poster. Please try again.');
+                            }
                         })
-                        .catch((error) => {});
+                        .catch((error) => {
+                            console.error('Error uploading poster:', error);
+                        });
                 } else {
                     video_recorder.posterUrl = await fetchFormData(video_recorder.poster);
                 }
@@ -992,27 +1155,21 @@
                     video_recorder.videoUrl = await fetchFormData(video_recorder.video);
                 } else {
                     uploadVideoChunks(video_recorder.video, function(response) {
-                        if (response.status == 'sent' || response.success == true) {
-                            video_recorder.videoUrl = response.data;
-                            if (video_recorder.videoUrl && video_recorder.posterUrl) {
-                                saveRecording(video_recorder); // Save recording
-                            } else {
-                                toastr.error('Error occurred while saving. Please try again.');
+                        try {
+                            if (response.status == 'sent' || response.success == true) {
+                                video_recorder.videoUrl = response.data;
+                                if (video_recorder.videoUrl && video_recorder.posterUrl) {
+                                    saveRecording(video_recorder); // Save recording
+                                } else {
+                                    toastr.error(
+                                        'Error occurred while saving. Please try again.');
+                                }
                             }
+                        } catch (error) {
+                            console.error('Error uploading video chunks:', error);
                         }
                     });
                 }
-
-                // Delay before further processing
-                // setTimeout(function() {
-                // Check if both poster and video URLs are fetched successfully
-                // if (video_recorder.videoUrl && video_recorder.posterUrl) {
-                //     saveRecording(video_recorder); // Save recording
-                // } else {
-                //     // toastr.error('Error occurred while saving. Please try again.');
-                // }
-                // loadingStop();
-                // }, 3000);
 
             });
 
@@ -1028,65 +1185,35 @@
 
 
         function uploadPoster(poster) {
-            return new Promise((resolve, reject) => {
-                let formData = new FormData();
-                formData.append('poster', poster);
-                formData.append('_token', "{{ csrf_token() }}");
+            if (poster) {
+                return new Promise((resolve, reject) => {
+                    let formData = new FormData();
+                    formData.append('poster', poster);
+                    formData.append('_token', "{{ csrf_token() }}");
 
-                $.ajax({
-                    type: "POST",
-                    url: "{{ route('upload.poster') }}",
-                    data: formData,
-                    processData: false,
-                    contentType: false,
-                    success: function(response) {
-                        if (response.success == true) {
-                            resolve(response.data);
-                        } else {
+                    $.ajax({
+                        type: "POST",
+                        url: "{{ route('upload.poster') }}",
+                        data: formData,
+                        processData: false,
+                        contentType: false,
+                        success: function(response) {
+                            if (response.success == true) {
+                                resolve(response.data);
+                            } else {
+                                reject(null);
+                            }
+                        },
+                        error: function(error) {
                             reject(null);
                         }
-                    },
-                    error: function(error) {
-                        reject(null);
-                    }
+                    });
                 });
-            });
+            } else {
+                console.error('No poster to upload', poster);
+                return null;
+            }
         }
-
-        // async function uploadVideoChunks(videoBlob, callback) {
-        //     const chunkSize = 1024 * 1024;
-        //     let offset = 0;
-        //     let lastChunkIndex = Math.ceil(videoBlob.size / chunkSize);
-        //     let err = [];
-
-        //     // Generate a random folder name
-        //     const randomFolder = Math.random().toString(36).substring(2);
-
-        //     while (offset <= videoBlob.size) {
-        //         let offsetSize = offset + chunkSize;
-        //         let chunk = videoBlob.slice(offset, offsetSize);
-
-        //         let formData = new FormData();
-
-        //         formData.append('videoChunk', chunk);
-        //         formData.append('chunkIndex', Math.ceil(offset / chunkSize) + 1); // Calculate chunk index
-        //         formData.append('lastChunkIndex', lastChunkIndex); // Send last chunk index
-        //         formData.append('randomFolder', randomFolder); // Send random folder name
-        //         formData.append('_token', "{{ csrf_token() }}"); // Send csrf token
-
-        //         // Send chunk to server
-        //         let response = await fetch("/upload-chunks", {
-        //             method: 'POST',
-        //             body: formData
-        //         });
-        //         // Handle response as needed
-        //         if (offsetSize >= videoBlob.size) {
-        //             let responseData = await response.json();
-        //             callback(responseData);
-        //         }
-        //         offset += chunkSize;
-        //     }
-        // }
 
         async function uploadVideoChunks(videoBlob, callback) {
             const chunkSize = 1024 * 1024;
@@ -1109,28 +1236,141 @@
                 formData.append('randomFolder', randomFolder); // Send random folder name
                 formData.append('_token', "{{ csrf_token() }}"); // Send csrf token
 
+                // Send chunk to server
+                let response = await fetch("/upload-chunks", {
+                    method: 'POST',
+                    body: formData
+                });
+                // Handle response as needed
+                if (offsetSize >= videoBlob.size) {
+                    let responseData = await response.json();
+                    callback(responseData);
+                }
+                offset += chunkSize;
+            }
+        }
+
+        // async function uploadVideoChunks(videoBlob, callback) {
+        //     if (videoBlob == null) {
+        //         console.log('No video to upload' + videoBlob);
+        //         return null;
+        //     }
+        //     const chunkSize = 1024 * 1024;
+        //     let offset = 0;
+        //     let lastChunkIndex = Math.ceil(videoBlob.size / chunkSize);
+        //     let err = [];
+
+        //     // Generate a random folder name
+        //     const randomFolder = Math.random().toString(36).substring(2);
+
+        //     while (offset <= videoBlob.size) {
+        //         let offsetSize = offset + chunkSize;
+        //         let chunk = videoBlob.slice(offset, offsetSize);
+
+        //         let formData = new FormData();
+
+        //         formData.append('videoChunk', chunk);
+        //         formData.append('chunkIndex', Math.ceil(offset / chunkSize) + 1); // Calculate chunk index
+        //         formData.append('lastChunkIndex', lastChunkIndex); // Send last chunk index
+        //         formData.append('randomFolder', randomFolder); // Send random folder name
+        //         formData.append('_token', "{{ csrf_token() }}"); // Send csrf token
+
+        //         try {
+        //             // Send chunk to server
+        //             let response = await fetch("/upload-chunks", {
+        //                 method: 'POST',
+        //                 body: formData
+        //             });
+
+        //             if (!response.ok) {
+        //                 toastr.error('Error occurred while uploading video chunks');
+        //                 // throw new Error('Network response was not ok');
+        //             }
+
+        //             // Handle response as needed
+        //             if (offsetSize >= videoBlob.size) {
+        //                 let responseData = await response.json();
+        //                 callback(responseData);
+        //             }
+        //         } catch (error) {
+        //             toastr.error('Error occurred while uploading video chunks');
+        //             // Handle error
+        //             console.error('Error uploading chunk:', error.message);
+        //             // Add error to the array of errors
+        //             err.push(error.message);
+        //         }
+
+        //         offset += chunkSize;
+        //     }
+
+        //     // If there were errors, display them
+        //     if (err.length > 0) {
+        //         console.error('Errors occurred during upload:', err);
+        //         // Optionally, you can inform the user about the errors
+        //         // For example: alert('Errors occurred during upload: ' + err.join(', '));
+        //     }
+        // }
+
+        async function uploadChunks(fileOrBlob, callback) {
+            let blob = null;
+
+            // If fileOrBlob is a Blob, use it directly
+            if (fileOrBlob instanceof Blob) {
+                console.log('Blob:', fileOrBlob);
+                blob = fileOrBlob;
+            } else if (fileOrBlob instanceof File) {
+                console.log('File:', fileOrBlob);
+                // If fileOrBlob is a File object, extract Blob from it
+                blob = fileOrBlob.slice(0, fileOrBlob.size, fileOrBlob.type);
+            } else {
+                // If neither Blob nor File object is provided, throw an error
+                // throw new Error('Invalid input: Expecting a Blob or a File object');
+                toastr.error('Invalid input: Expecting a Blob or a File object');
+            }
+
+            const chunkSize = 1024 * 1024; // 1 MB chunk size
+            let offset = 0;
+            const lastChunkIndex = Math.ceil(blob.size / chunkSize);
+            const randomFolder = Math.random().toString(36).substring(2);
+            const err = [];
+
+            if (blob == null) {
+                console.log('No file to upload');
+                return null;
+
+            }
+
+            while (offset <= blob.size) {
+                const offsetSize = offset + chunkSize;
+                const chunk = blob.slice(offset, offsetSize);
+
+                const formData = new FormData();
+                formData.append('fileChunk', chunk);
+                formData.append('chunkIndex', Math.ceil(offset / chunkSize) + 1); // Calculate chunk index
+                formData.append('lastChunkIndex', lastChunkIndex); // Send last chunk index
+                formData.append('randomFolder', randomFolder); // Send random folder name
+                formData.append('_token', "{{ csrf_token() }}"); // Send csrf token
+
                 try {
                     // Send chunk to server
-                    let response = await fetch("/upload-chunks", {
+                    const response = await fetch("/upload-chunks", {
                         method: 'POST',
                         body: formData
                     });
 
                     if (!response.ok) {
-                        toastr.error('Error occurred while uploading video chunks');
+                        toastr.error('Error occurred while uploading file chunks');
                         // throw new Error('Network response was not ok');
                     }
 
                     // Handle response as needed
-                    if (offsetSize >= videoBlob.size) {
-                        let responseData = await response.json();
+                    if (offsetSize >= blob.size) {
+                        const responseData = await response.json();
                         callback(responseData);
                     }
                 } catch (error) {
-                    toastr.error('Error occurred while uploading video chunks');
-                    // Handle error
+                    toastr.error('Error occurred while uploading file chunks');
                     console.error('Error uploading chunk:', error.message);
-                    // Add error to the array of errors
                     err.push(error.message);
                 }
 
@@ -1144,25 +1384,6 @@
                 // For example: alert('Errors occurred during upload: ' + err.join(', '));
             }
         }
-
-
-        $("#recording-modal").on("hidden.bs.modal", function() {
-            $('.save_recording_btn').removeClass('d-flex');
-            if (player_face) {
-                player_face.dispose();
-                player_face = null;
-            }
-
-            if (player) {
-                player.dispose();
-                player = null;
-            }
-
-            if (recorder) {
-                recorder.stopRecording();
-                recorder = null;
-            }
-        });
 
         function sendFormData(file, name = null) {
             let form_Id = "HlYGceKpcoDe2MWZxjDx";
@@ -1241,6 +1462,24 @@
                 request.send(form);
             });
         }
+
+        $("#recording-modal").on("hidden.bs.modal", function() {
+            $('.save_recording_btn').removeClass('d-flex');
+            if (player_face) {
+                player_face.dispose();
+                player_face = null;
+            }
+
+            if (player) {
+                player.dispose();
+                player = null;
+            }
+
+            if (recorder) {
+                recorder.stopRecording();
+                recorder = null;
+            }
+        });
     </script>
     @include('recording.processing')
     @include('recording.events')

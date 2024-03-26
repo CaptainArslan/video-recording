@@ -295,7 +295,8 @@ class RecordingController extends Controller
         try {
             $file = $request->file('videoChunk');
             if (!$file) {
-                throw new \Exception('No file uploaded.');
+                return response()->json(['success' => false, 'message' => 'No file uploaded.']);
+                // throw new \Exception('No file uploaded.');
             }
 
             $fileName = 'blob'; // Unique file name for the blob
@@ -306,12 +307,14 @@ class RecordingController extends Controller
             // Create a directory for storing chunk files if it doesn't exist
             $tempDirectory = storage_path('app/temp/' . $randomFolder);
             if (!file_exists($tempDirectory) && !mkdir($tempDirectory, 0777, true)) {
-                throw new \Exception('Failed to create temp directory.');
+                return response()->json(['success' => false, 'message' => 'Failed to create temp directory.']);
+                // throw new \Exception('Failed to create temp directory.');
             }
 
             // Move the uploaded chunk file to the temporary directory
             if (!$file->move($tempDirectory, $fileName . '_' . $chunkNumber)) {
-                throw new \Exception('Failed to move uploaded file to temp directory.');
+                return response()->json(['success' => false, 'message' => 'Failed to move uploaded file to temp directory.']);
+                // throw new \Exception('Failed to move uploaded file to temp directory.');
             }
 
             // Check if all chunks have been uploaded
@@ -320,7 +323,7 @@ class RecordingController extends Controller
                 $outputFilePath = storage_path('app/temp/' . $randomFolder . '/' . $fileName);
 
                 // Merge the chunks into a single file
-                $url =  $this->mergeBlobChunks($fileName, $outputFilePath, $totalChunks, $randomFolder);
+                // $url =  $this->mergeBlobChunks($fileName, $outputFilePath, $totalChunks, $randomFolder);
 
                 // Clear temporary chunk files
                 $this->clearTempChunks($fileName, $totalChunks, $randomFolder);
@@ -380,7 +383,11 @@ class RecordingController extends Controller
         }
 
         $file->move($folder, $fileName);
-        return response()->json(['success' => true, 'message' => 'Poster uploaded successfully', 'data' => env('APP_URL') . '/uploads/poster/' . $fileName]);
+        return response()->json([
+            'success' => true,
+            'message' => 'Poster uploaded successfully',
+            'data' => env('APP_URL') . '/uploads/poster/' . $fileName
+        ]);
     }
 
     public function publish(Request $request, $id)
