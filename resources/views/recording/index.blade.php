@@ -1,6 +1,7 @@
 @extends('layouts.app')
 @section('title', 'Recordings')
-@section('css')
+@section('css').
+    {{-- Video Js --}}
     <link href="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.css" rel="stylesheet">
     <style>
         [aria-label="Video"],
@@ -182,7 +183,23 @@
     <script src="{{ asset('js/video-js.js') }}"></script>
 
     {{-- Gif Js --}}
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js"></script>
+    {{-- <script src="https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.worker.js"></script> --}}
+
+
+    <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg/dist/ffmpeg.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg/dist/ffmpeg.wasm.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gif.js/dist/gif.js"></script>
+
+
+    {{-- <script src="https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js"
+        integrity="sha512-nNOFtIS+H0lwgdUDaPn/g1ssw3uN9AkEM7zy2wLaTQeLQNeNiitUcLpEpDIh3Z4T22MdeTNru/SQbNM4ig2rng=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js"
+        integrity="sha512-3piO8GKVGn3D+eEWnTquDnlxM00ESMZpYNAnjmOMswHrGihZvdlsRjSW1bHLqahzIoyL9YWlLWVYRV4J8AHwtg=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script> --}}
+
 
     <script>
         var player = null;
@@ -197,6 +214,11 @@
         let audioRecord = null;
         let currentInstance = false;
         let localUpload = true;
+        let uploadBtn = $('.upload_btn');
+        var durationMinutes = 0;
+        var allowSaveBtn = false;
+        var limit = `{{ $limit }}`;
+        var recCount = `{{ $recCount }}`;
 
         let blobs = {
             screen: null,
@@ -302,7 +324,7 @@
                 plugins: {
                     record: {
                         // pip: pipEnabled,
-                        audio: audio_rtc,
+                        audio: false,
                         video: video_setting_rtc,
                         maxLength: maxLength,
                         displayMilliseconds: false,
@@ -361,104 +383,170 @@
                     });
             }
 
-            // function captureFirstFrame(videoElement) {
-            //     return new Promise((resolve, reject) => {
-            //         const canvas = document.createElement('canvas');
-            //         const ctx = canvas.getContext('2d');
-            //         const firstFrameWidth = videoElement.videoWidth;
-            //         const firstFrameHeight = videoElement.videoHeight;
-            //         // Set canvas dimensions to match video
-            //         canvas.width = firstFrameWidth;
-            //         canvas.height = firstFrameHeight;
-            //         // Draw the first frame onto the canvas
-            //         ctx.drawImage(videoElement, 0, 0, firstFrameWidth, firstFrameHeight);
-            //         // Convert the canvas content to a Blob
-            //         canvas.toBlob(blob => {
-            //             if (!blob) {
-            //                 reject(new Error('Failed to capture frame as Blob'));
-            //                 return;
-            //             }
-            //             resolve(blob);
-            //         }, 'image/png');
-            //     });
-            // }
-
             function captureFirstFrame(videoElement) {
                 return new Promise((resolve, reject) => {
                     const canvas = document.createElement('canvas');
                     const ctx = canvas.getContext('2d');
-                    const frameWidth = videoElement.videoWidth;
-                    const frameHeight = videoElement.videoHeight;
-
-                    // Set canvas dimensions to match video frame
-                    canvas.width = frameWidth;
-                    canvas.height = frameHeight;
-
-                    const fps = 10; // Frames per second for GIF
-
-                    const startTime = 0; // Default start time
-                    const endTime = videoElement.duration ||
-                        5; // Default end time or 5 seconds if duration is not available
-
-                    const startFrameTime = startTime * fps;
-                    const endFrameTime = endTime * fps;
-
-                    let currentFrameTime = 0;
-
-                    // Function to draw and capture frames
-                    function drawAndCaptureFrame() {
-                        // Calculate current time in seconds
-                        const currentTime = currentFrameTime / fps;
-
-                        // Check if current time is within the specified range
-                        if (currentTime >= startTime && currentTime <= endTime) {
-                            // Draw the current frame onto the canvas
-                            ctx.drawImage(videoElement, 0, 0, frameWidth, frameHeight);
-
-                            // Add current frame to the GIF
-                            gif.addFrame(canvas, {
-                                copy: true,
-                                delay: 1 / fps
-                            });
+                    const firstFrameWidth = videoElement.videoWidth;
+                    const firstFrameHeight = videoElement.videoHeight;
+                    // Set canvas dimensions to match video
+                    canvas.width = firstFrameWidth;
+                    canvas.height = firstFrameHeight;
+                    // Draw the first frame onto the canvas
+                    ctx.drawImage(videoElement, 0, 0, firstFrameWidth, firstFrameHeight);
+                    // Convert the canvas content to a Blob
+                    canvas.toBlob(blob => {
+                        if (!blob) {
+                            reject(new Error('Failed to capture frame as Blob'));
+                            return;
                         }
-
-                        // Move to the next frame
-                        currentFrameTime++;
-
-                        // If not reached the end frame, continue capturing frames
-                        if (currentFrameTime <= endFrameTime) {
-                            // Move the video to the next frame
-                            videoElement.currentTime = currentFrameTime / fps;
-
-                            // Request next frame
-                            requestAnimationFrame(drawAndCaptureFrame);
-                        } else {
-                            // Render the GIF
-                            gif.render();
-                        }
-                    }
-
-
-                    // Create a new GIF instance
-                    const gif = new GIF({
-                        workers: 2,
-                        quality: 10
-                    });
-
-                    // Start capturing frames from the video
-                    videoElement.currentTime = startTime;
-                    videoElement.play();
-                    drawAndCaptureFrame();
-
-                    // When GIF rendering is finished, resolve the promise with the blob
-                    gif.on('finished', blob => {
                         resolve(blob);
+                    }, 'image/png');
+                });
+            }
+
+            function uploadPoster(poster) {
+                if (poster) {
+                    return new Promise((resolve, reject) => {
+                        let formData = new FormData();
+                        formData.append('poster', poster);
+                        formData.append('_token', "{{ csrf_token() }}");
+
+                        $.ajax({
+                            type: "POST",
+                            url: "{{ route('upload.poster') }}",
+                            data: formData,
+                            processData: false,
+                            contentType: false,
+                            success: function(response) {
+                                if (response.success == true) {
+                                    resolve(response.data);
+                                } else {
+                                    reject(null);
+                                }
+                            },
+                            error: function(error) {
+                                reject(null);
+                            }
+                        });
+                    });
+                } else {
+                    console.error('No poster to upload', poster);
+                    return null;
+                }
+            }
+
+            async function uploadVideoChunks(videoBlob, callback) {
+                const chunkSize = 1024 * 1024;
+                let offset = 0;
+                let lastChunkIndex = Math.ceil(videoBlob.size / chunkSize);
+                let err = [];
+
+                // Generate a random folder name
+                const randomFolder = Math.random().toString(36).substring(2);
+
+                while (offset <= videoBlob.size) {
+                    let offsetSize = offset + chunkSize;
+                    let chunk = videoBlob.slice(offset, offsetSize);
+
+                    let formData = new FormData();
+
+                    formData.append('videoChunk', chunk);
+                    formData.append('chunkIndex', Math.ceil(offset / chunkSize) + 1); // Calculate chunk index
+                    formData.append('lastChunkIndex', lastChunkIndex); // Send last chunk index
+                    formData.append('randomFolder', randomFolder); // Send random folder name
+                    formData.append('_token', "{{ csrf_token() }}"); // Send csrf token
+
+                    // Send chunk to server
+                    let response = await fetch("/upload-chunks", {
+                        method: 'POST',
+                        body: formData
+                    });
+                    // Handle response as needed
+                    if (offsetSize >= videoBlob.size) {
+                        let responseData = await response.json();
+                        callback(responseData);
+                    }
+                    offset += chunkSize;
+                }
+            }
+
+            const gifOptions = {
+                workers: 4,
+                quality: 10,
+                // width: 320,
+                // height: 240,
+                fps: 15,
+                duration: 5 // 5 seconds
+            };
+
+            function createGifFromVideo(videoElement, options = {}) {
+                return new Promise(async (resolve, reject) => {
+                    const ffmpeg = createFFmpeg({
+                        log: true
+                    });
+                    await ffmpeg.load();
+
+                    const fps = options.fps || 10; // Frames per second
+                    const durationInSeconds = options.duration || 5; // Duration in seconds
+                    const totalFrames = durationInSeconds * fps;
+                    const frameDuration = 1 / fps;
+
+                    const gif = new GIF({
+                        quality: options.quality || 10,
+                        width: options.width || videoElement.videoWidth,
+                        height: options.height || videoElement.videoHeight
                     });
 
-                    // If any error occurs during GIF rendering, reject the promise
-                    gif.on('error', error => {
-                        reject(error);
-                    });
+                    let currentFrame = 0;
+
+                    const captureFrame = async () => {
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        canvas.width = videoElement.videoWidth;
+                        canvas.height = videoElement.videoHeight;
+                        ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+
+                        gif.addFrame(canvas, {
+                            delay: frameDuration * 1000
+                        });
+
+                        currentFrame++;
+                        if (currentFrame < totalFrames) {
+                            videoElement.currentTime += frameDuration;
+                            requestAnimationFrame(captureFrame);
+                        } else {
+                            const dataUrl = await new Promise(resolve => gif.on('finished',
+                                resolve));
+                            const dataBlob = await fetch(dataUrl).then(res => res.blob());
+
+                            // Keep adjusting quality until the file size is within the desired range
+                            let gifSizeKB = Math.round(dataBlob.size / 1024);
+                            while (gifSizeKB > 20 && gifSizeKB > 10) {
+                                const tempGif = new GIF({
+                                    quality: gif.quality - 1, // Decrease quality
+                                    width: options.width || videoElement.videoWidth,
+                                    height: options.height || videoElement.videoHeight
+                                });
+                                tempGif.addFrame(canvas, {
+                                    delay: frameDuration * 1000
+                                });
+                                const tempDataUrl = await new Promise(resolve => tempGif.on(
+                                    'finished', resolve));
+                                const tempDataBlob = await fetch(tempDataUrl).then(res => res
+                                    .blob());
+                                gifSizeKB = Math.round(tempDataBlob.size / 1024);
+                                if (gifSizeKB <= 20 || gifSizeKB <= 10) {
+                                    resolve(tempDataBlob);
+                                } else {
+                                    gif.quality--; // Decrease quality further
+                                }
+                            }
+                        }
+                    };
+
+                    videoElement.currentTime = 0; // Start at the beginning
+                    captureFrame();
                 });
             }
 
@@ -908,12 +996,11 @@
                                     video_recorder.video = player.recordedData;
 
                                     setTimeout(function() {
-                                        // captureFirstFrame(document.querySelector(
-                                        //     '#my-video #my-video_html5_api')).then(
-                                        //     t => {
-                                        //         console.log(t);
-                                        //         video_recorder.poster = t;
-                                        //     });
+                                        captureFirstFrame(document.querySelector(
+                                            '#my-video #my-video_html5_api')).then(
+                                            t => {
+                                                video_recorder.poster = t;
+                                            });
                                     }, 1500);
 
                                 });
@@ -1034,68 +1121,87 @@
                 $('#subject').val($(this).data('title'));
             });
 
+            $(uploadBtn).attr('disabled', 'disabled'); // Disable upload button by default
+
             $('body').on('change', '#select-video', function(e) {
                 e.preventDefault();
                 let file = e.target.files[0];
-                console.log(file);
-                $('#uploaded_video source').attr('src', URL.createObjectURL(file));
-                let video = $('#uploaded_video')[0];
 
-                console.log('Duration:', video.duration);
+                let uploaded_video = $('#uploaded_video').attr('src', URL.createObjectURL(file));
+                let video = uploaded_video[0]; // Extract the DOM element from jQuery object
 
                 if (video) {
-                    // video.onloadedmetadata = function() {
-                    let durationMinutes = video.duration / 60; // Convert duration to minutes
-                    console.log('Duration in minutes:', durationMinutes.toFixed(
-                        2)); // Display duration in minutes
-                    if (durationMinutes > maxLength) {
-                        toastr.error('File duration is greater than the allowed duration');
-                    } else {
-                        toastr.success('File duration is within the allowed duration');
-                    }
-                    // };
+                    video.onloadedmetadata = function() {
+                        durationMinutes = video.duration / 60; // Convert duration to minutes
+                        // Comparing with maxLength
+                        if (durationMinutes <= maxLength / 60) {
+                            toastr.success('File duration is within the allowed duration');
+                            $(uploadBtn).removeAttr(
+                                'disabled'
+                            ); // Remove disabled attribute if duration is within the allowed limit
+                            allowSaveBtn = true;
+                        } else {
+                            allowSaveBtn = false;
+                            toastr.error('File duration is greater than the allowed duration');
+                            $(uploadBtn).attr('disabled',
+                                'disabled'); // Re-disable the button if duration exceeds the limit
+                        }
+
+                        video_recorder.video = file;
+
+                        setTimeout(() => {
+                            captureFirstFrame(document.querySelector(
+                                '#uploaded_video')).then(
+                                t => {
+                                    video_recorder.poster = t;
+                                });
+                            // createGifFromVideo(document.querySelector(
+                            //         '#uploaded_video'), gifOptions)
+                            //     .then(blob => {
+                            //         video_recorder.poster = blob;
+                            //         // Create a download link for the generated GIF
+                            //         const url = URL.createObjectURL(blob);
+                            //         const a = document.createElement('a');
+                            //         a.href = url;
+                            //         a.download =
+                            //             'generated.gif'; // Set the filename for download
+                            //         a.textContent = 'Download GIF';
+                            //         document.body.appendChild(a);
+                            //         a.click(); // Simulate click to trigger download
+                            //         document.body.removeChild(a); // Cleanup
+                            //     })
+                            //     .catch(error => {
+                            //         // Handle errors
+                            //         console.error('Failed to create GIF:', error);
+                            //     });
+                        }, 1000);
+                    };
                 }
             });
 
+            const fetchFormData = async (formData) => {
+                const data = await sendFormData(formData);
+                if (data?.formData && data?.field_id) {
+                    const field = data.formData[data.field_id] ?? null;
+                    if (field) {
+                        const values = Object.values(field);
+                        if (values.length > 0) {
+                            return values[0].url;
+                        }
+                    }
+                }
+                return null;
+            };
 
-            // $('.upload_video ').click(function(e) {
-            //     e.preventDefault();
-            //     alert('upload video');
-
-            //     captureFirstFrame(document.querySelector(
-            //         '#my-video #my-video_html5_api')).then(
-            //         t => {
-            //             console.log(t);
-            //             video_recorder.poster = t;
-            //         });
-
-
-            //     let title = $('input[name="title"]').val();
-            //     if (title == '') {
-            //         toastr.error('Title is required');
-            //         return;
-            //     }
-
-            //     video_recorder.title = title;
-
-            //     let status = $(this).data('status');
-            //     video_recorder.status = status;
-
-            //     if (video_recorder.video && video_recorder.poster) {
-            //         toastr.success('Video saved successfully');
-            //         // saveRecording(video_recorder);
-            //     } else {
-            //         toastr.error('Error occurred while saving. Please try again.');
-            //     }
-            // });
-
-            $('.save_video').click(async function(e) {
+            $(uploadBtn).click(async function(e) {
                 e.preventDefault();
-                // $('.save_video').html('Loading...').addClass('disabled');
 
-                // Get the title input value
-                let title = $('input[name="title"]').val() ?? $(
-                    'input[name="video_title"]').val();
+                if (!allowSaveBtn && recCount >= limit) {
+                    toastr.error('You are not allowed to save this video');
+                    return;
+                }
+
+                let title = $('input[name="video_title"]').val();
 
                 // Check if title is empty
                 if (title == '') {
@@ -1105,31 +1211,88 @@
 
                 loadingStart('Saving...');
 
-                captureFirstFrame(document.querySelector(
-                    '#my-video #my-video_html5_api')).then(
-                    t => {
-                        video_recorder.poster = t;
-                    });
-
                 // let status =
                 video_recorder.title = title;
                 video_recorder.status = $(this).data('status');
 
-                console.log(video_recorder);
 
-                const fetchFormData = async (formData) => {
-                    const data = await sendFormData(formData);
-                    if (data?.formData && data?.field_id) {
-                        const field = data.formData[data.field_id] ?? null;
-                        if (field) {
-                            const values = Object.values(field);
-                            if (values.length > 0) {
-                                return values[0].url;
+                // code to upload poster
+                if (localUpload) {
+                    uploadPoster(video_recorder.poster)
+                        .then((responseData) => {
+                            if (responseData) {
+                                video_recorder.posterUrl = responseData;
+                            } else {
+                                toastr.error(
+                                    'Error occurred while uploading poster. Please try again.');
                             }
+                        })
+                        .catch((error) => {
+                            console.error('Error uploading poster:', error);
+                        });
+                } else {
+                    video_recorder.posterUrl = await fetchFormData(video_recorder.poster);
+                }
+
+                // code to upload video
+                let videoSizeMB = Math.ceil(parseFloat(durationMinutes));
+                if (videoSizeMB < 30 && localUpload == false) {
+                    video_recorder.videoUrl = await fetchFormData(video_recorder.video);
+                } else {
+
+
+                    uploadVideoChunks(video_recorder.video, function(response) {
+                        try {
+                            if (response.status == 'sent' || response.success == true) {
+                                video_recorder.videoUrl = response.data;
+                                if (video_recorder.videoUrl && video_recorder.posterUrl) {
+                                    saveRecording(video_recorder,
+                                        'upload-video-modal'); // Save recording
+                                } else {
+                                    toastr.error(
+                                        'Error occurred while saving. Please try again.');
+                                }
+                            }
+                        } catch (error) {
+                            console.error('Error uploading video chunks:', error);
                         }
-                    }
-                    return null;
-                };
+                    });
+                }
+
+            });
+
+            $('.save_video').click(async function(e) {
+                e.preventDefault();
+                // $('.save_video').html('Loading...').addClass('disabled');
+
+                // Get the title input value
+                let title = $('input[name="title"]').val();
+
+                // Check if title is empty
+                if (title == '') {
+                    toastr.error('Title is required');
+                    return;
+                }
+
+                loadingStart('Saving...');
+                // let status =
+                video_recorder.title = title;
+                video_recorder.status = $(this).data('status');
+
+
+                // const fetchFormData = async (formData) => {
+                //     const data = await sendFormData(formData);
+                //     if (data?.formData && data?.field_id) {
+                //         const field = data.formData[data.field_id] ?? null;
+                //         if (field) {
+                //             const values = Object.values(field);
+                //             if (values.length > 0) {
+                //                 return values[0].url;
+                //             }
+                //         }
+                //     }
+                //     return null;
+                // };
 
                 // code to upload poster
                 if (localUpload) {
@@ -1183,143 +1346,13 @@
             // });
         });
 
-
-        function uploadPoster(poster) {
-            if (poster) {
-                return new Promise((resolve, reject) => {
-                    let formData = new FormData();
-                    formData.append('poster', poster);
-                    formData.append('_token', "{{ csrf_token() }}");
-
-                    $.ajax({
-                        type: "POST",
-                        url: "{{ route('upload.poster') }}",
-                        data: formData,
-                        processData: false,
-                        contentType: false,
-                        success: function(response) {
-                            if (response.success == true) {
-                                resolve(response.data);
-                            } else {
-                                reject(null);
-                            }
-                        },
-                        error: function(error) {
-                            reject(null);
-                        }
-                    });
-                });
-            } else {
-                console.error('No poster to upload', poster);
-                return null;
-            }
-        }
-
-        async function uploadVideoChunks(videoBlob, callback) {
-            const chunkSize = 1024 * 1024;
-            let offset = 0;
-            let lastChunkIndex = Math.ceil(videoBlob.size / chunkSize);
-            let err = [];
-
-            // Generate a random folder name
-            const randomFolder = Math.random().toString(36).substring(2);
-
-            while (offset <= videoBlob.size) {
-                let offsetSize = offset + chunkSize;
-                let chunk = videoBlob.slice(offset, offsetSize);
-
-                let formData = new FormData();
-
-                formData.append('videoChunk', chunk);
-                formData.append('chunkIndex', Math.ceil(offset / chunkSize) + 1); // Calculate chunk index
-                formData.append('lastChunkIndex', lastChunkIndex); // Send last chunk index
-                formData.append('randomFolder', randomFolder); // Send random folder name
-                formData.append('_token', "{{ csrf_token() }}"); // Send csrf token
-
-                // Send chunk to server
-                let response = await fetch("/upload-chunks", {
-                    method: 'POST',
-                    body: formData
-                });
-                // Handle response as needed
-                if (offsetSize >= videoBlob.size) {
-                    let responseData = await response.json();
-                    callback(responseData);
-                }
-                offset += chunkSize;
-            }
-        }
-
-        // async function uploadVideoChunks(videoBlob, callback) {
-        //     if (videoBlob == null) {
-        //         console.log('No video to upload' + videoBlob);
-        //         return null;
-        //     }
-        //     const chunkSize = 1024 * 1024;
-        //     let offset = 0;
-        //     let lastChunkIndex = Math.ceil(videoBlob.size / chunkSize);
-        //     let err = [];
-
-        //     // Generate a random folder name
-        //     const randomFolder = Math.random().toString(36).substring(2);
-
-        //     while (offset <= videoBlob.size) {
-        //         let offsetSize = offset + chunkSize;
-        //         let chunk = videoBlob.slice(offset, offsetSize);
-
-        //         let formData = new FormData();
-
-        //         formData.append('videoChunk', chunk);
-        //         formData.append('chunkIndex', Math.ceil(offset / chunkSize) + 1); // Calculate chunk index
-        //         formData.append('lastChunkIndex', lastChunkIndex); // Send last chunk index
-        //         formData.append('randomFolder', randomFolder); // Send random folder name
-        //         formData.append('_token', "{{ csrf_token() }}"); // Send csrf token
-
-        //         try {
-        //             // Send chunk to server
-        //             let response = await fetch("/upload-chunks", {
-        //                 method: 'POST',
-        //                 body: formData
-        //             });
-
-        //             if (!response.ok) {
-        //                 toastr.error('Error occurred while uploading video chunks');
-        //                 // throw new Error('Network response was not ok');
-        //             }
-
-        //             // Handle response as needed
-        //             if (offsetSize >= videoBlob.size) {
-        //                 let responseData = await response.json();
-        //                 callback(responseData);
-        //             }
-        //         } catch (error) {
-        //             toastr.error('Error occurred while uploading video chunks');
-        //             // Handle error
-        //             console.error('Error uploading chunk:', error.message);
-        //             // Add error to the array of errors
-        //             err.push(error.message);
-        //         }
-
-        //         offset += chunkSize;
-        //     }
-
-        //     // If there were errors, display them
-        //     if (err.length > 0) {
-        //         console.error('Errors occurred during upload:', err);
-        //         // Optionally, you can inform the user about the errors
-        //         // For example: alert('Errors occurred during upload: ' + err.join(', '));
-        //     }
-        // }
-
         async function uploadChunks(fileOrBlob, callback) {
             let blob = null;
 
             // If fileOrBlob is a Blob, use it directly
             if (fileOrBlob instanceof Blob) {
-                console.log('Blob:', fileOrBlob);
                 blob = fileOrBlob;
             } else if (fileOrBlob instanceof File) {
-                console.log('File:', fileOrBlob);
                 // If fileOrBlob is a File object, extract Blob from it
                 blob = fileOrBlob.slice(0, fileOrBlob.size, fileOrBlob.type);
             } else {
@@ -1335,7 +1368,6 @@
             const err = [];
 
             if (blob == null) {
-                console.log('No file to upload');
                 return null;
 
             }
@@ -1480,6 +1512,8 @@
                 recorder = null;
             }
         });
+
+        $("#upload-video-modal").on("hidden.bs.modal", function() {});
     </script>
     @include('recording.processing')
     @include('recording.events')

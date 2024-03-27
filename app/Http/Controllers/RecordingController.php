@@ -323,7 +323,7 @@ class RecordingController extends Controller
                 $outputFilePath = storage_path('app/temp/' . $randomFolder . '/' . $fileName);
 
                 // Merge the chunks into a single file
-                // $url =  $this->mergeBlobChunks($fileName, $outputFilePath, $totalChunks, $randomFolder);
+                $url =  $this->mergeBlobChunks($fileName, $outputFilePath, $totalChunks, $randomFolder);
 
                 // Clear temporary chunk files
                 $this->clearTempChunks($fileName, $totalChunks, $randomFolder);

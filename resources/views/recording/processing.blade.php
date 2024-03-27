@@ -1,5 +1,5 @@
 <script>
-    function saveRecording(video_recorder) {
+    function saveRecording(video_recorder, modal = 'recording-modal') {
         let formData = new FormData();
         let xt = null;
         formData.append('status', video_recorder.status);
@@ -43,7 +43,7 @@
                         showConfirmButton: false,
                         timer: 2000
                     });
-                    $('#recording-modal .close-modal').trigger('click');
+                    $(`#${modal} .close-modal`).trigger('click');
                     // location.reload();
                     fetchData(1);
                 } else {

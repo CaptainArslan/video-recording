@@ -25,18 +25,18 @@
 
                     <div class="mt-2"></div>
 
-                    <video controls class="w-100" height="360" id="uploaded_video">
-                        <source src="" type="video/mp4">
+                    <video controls class="w-100" height="360" id="uploaded_video" autoplay="off">
+                        <source src="" type="video/mp4,video/*">
                         Your browser does not support the video tag.
                     </video>
 
                     <div class="mt-2"></div>
 
                     <div class="d-flex">
-                        <button type="button" role="button" class="btn btn-primary mt-4 upload_video mx-1"
+                        <button type="button" role="button" class="btn btn-primary mt-4 upload_btn mx-1"
                             data-status="draft">Save
                             Draft</button>
-                        <button type="button" role="button" class="btn btn-primary mt-4 upload_video"
+                        <button type="button" role="button" class="btn btn-primary mt-4 upload_btn"
                             data-status="publish">Publish Video</button>
                     </div>
                 </div>
