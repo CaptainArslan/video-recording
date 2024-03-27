@@ -182,23 +182,10 @@
     {{-- video js options --}}
     <script src="{{ asset('js/video-js.js') }}"></script>
 
-    {{-- Gif Js --}}
-    {{-- <script src="https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.worker.js"></script> --}}
 
-
-    <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg/dist/ffmpeg.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg/dist/ffmpeg.wasm.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/gif.js/dist/gif.js"></script>
 
-
-    {{-- <script src="https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js"
-        integrity="sha512-nNOFtIS+H0lwgdUDaPn/g1ssw3uN9AkEM7zy2wLaTQeLQNeNiitUcLpEpDIh3Z4T22MdeTNru/SQbNM4ig2rng=="
-        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js"
-        integrity="sha512-3piO8GKVGn3D+eEWnTquDnlxM00ESMZpYNAnjmOMswHrGihZvdlsRjSW1bHLqahzIoyL9YWlLWVYRV4J8AHwtg=="
-        crossorigin="anonymous" referrerpolicy="no-referrer"></script> --}}
+    <canvas id="canvasgif" style="display: none;"></canvas>
 
 
     <script>
@@ -238,6 +225,8 @@
         if (window.self == window.parent && is_company) {
             document.querySelector('body').classList.remove('iframe');
         }
+
+
 
         $(document).ready(function() {
 
@@ -472,76 +461,51 @@
             }
 
             const gifOptions = {
-                workers: 4,
-                quality: 10,
-                // width: 320,
-                // height: 240,
-                fps: 15,
-                duration: 5 // 5 seconds
+                workers: 16,
+                quality: 1,
+                repeat: 0,
+                fps: 4,
+                duration: 10 // 5 seconds
             };
 
             function createGifFromVideo(videoElement, options = {}) {
-                return new Promise(async (resolve, reject) => {
-                    const ffmpeg = createFFmpeg({
-                        log: true
+                return new Promise((resolve, reject) => {
+                    const gif = new GIF({
+                        workers: options.workers || 4,
+                        workerScript: '/js/gifWorker.js',
+                        quality: options.quality || 10,
+                        // width: options.width || videoElement.videoWidth,
+                        // height: options.height || videoElement.videoHeight
                     });
-                    await ffmpeg.load();
+
+                    gif.on('finished', function(blob) {
+                        resolve(blob);
+                    });
 
                     const fps = options.fps || 10; // Frames per second
                     const durationInSeconds = options.duration || 5; // Duration in seconds
                     const totalFrames = durationInSeconds * fps;
                     const frameDuration = 1 / fps;
 
-                    const gif = new GIF({
-                        quality: options.quality || 10,
-                        width: options.width || videoElement.videoWidth,
-                        height: options.height || videoElement.videoHeight
-                    });
-
                     let currentFrame = 0;
-
-                    const captureFrame = async () => {
+                    const captureFrame = () => {
                         const canvas = document.createElement('canvas');
                         const ctx = canvas.getContext('2d');
-                        canvas.width = videoElement.videoWidth;
-                        canvas.height = videoElement.videoHeight;
+                        canvas.width = 250;
+                        canvas.height = 250;
+                        //ctx.canvas.willReadFrequently = true;
                         ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
-
                         gif.addFrame(canvas, {
-                            delay: frameDuration * 1000
+                            delay: frameDuration
                         });
 
                         currentFrame++;
-                        if (currentFrame < totalFrames) {
+                        console.log(videoElement.currentTime);
+                        if (videoElement.currentTime < durationInSeconds) {
                             videoElement.currentTime += frameDuration;
                             requestAnimationFrame(captureFrame);
                         } else {
-                            const dataUrl = await new Promise(resolve => gif.on('finished',
-                                resolve));
-                            const dataBlob = await fetch(dataUrl).then(res => res.blob());
-
-                            // Keep adjusting quality until the file size is within the desired range
-                            let gifSizeKB = Math.round(dataBlob.size / 1024);
-                            while (gifSizeKB > 20 && gifSizeKB > 10) {
-                                const tempGif = new GIF({
-                                    quality: gif.quality - 1, // Decrease quality
-                                    width: options.width || videoElement.videoWidth,
-                                    height: options.height || videoElement.videoHeight
-                                });
-                                tempGif.addFrame(canvas, {
-                                    delay: frameDuration * 1000
-                                });
-                                const tempDataUrl = await new Promise(resolve => tempGif.on(
-                                    'finished', resolve));
-                                const tempDataBlob = await fetch(tempDataUrl).then(res => res
-                                    .blob());
-                                gifSizeKB = Math.round(tempDataBlob.size / 1024);
-                                if (gifSizeKB <= 20 || gifSizeKB <= 10) {
-                                    resolve(tempDataBlob);
-                                } else {
-                                    gif.quality--; // Decrease quality further
-                                }
-                            }
+                            gif.render();
                         }
                     };
 
@@ -549,6 +513,7 @@
                     captureFrame();
                 });
             }
+
 
 
             function recordUserFace() {
@@ -1125,6 +1090,8 @@
 
             $('body').on('change', '#select-video', function(e) {
                 e.preventDefault();
+
+
                 let file = e.target.files[0];
 
                 let uploaded_video = $('#uploaded_video').attr('src', URL.createObjectURL(file));
@@ -1150,30 +1117,30 @@
                         video_recorder.video = file;
 
                         setTimeout(() => {
-                            captureFirstFrame(document.querySelector(
-                                '#uploaded_video')).then(
-                                t => {
-                                    video_recorder.poster = t;
-                                });
-                            // createGifFromVideo(document.querySelector(
-                            //         '#uploaded_video'), gifOptions)
-                            //     .then(blob => {
-                            //         video_recorder.poster = blob;
-                            //         // Create a download link for the generated GIF
-                            //         const url = URL.createObjectURL(blob);
-                            //         const a = document.createElement('a');
-                            //         a.href = url;
-                            //         a.download =
-                            //             'generated.gif'; // Set the filename for download
-                            //         a.textContent = 'Download GIF';
-                            //         document.body.appendChild(a);
-                            //         a.click(); // Simulate click to trigger download
-                            //         document.body.removeChild(a); // Cleanup
-                            //     })
-                            //     .catch(error => {
-                            //         // Handle errors
-                            //         console.error('Failed to create GIF:', error);
+                            // captureFirstFrame(document.querySelector(
+                            //     '#uploaded_video')).then(
+                            //     t => {
+                            //         video_recorder.poster = t;
                             //     });
+                            createGifFromVideo(document.querySelector(
+                                    '#uploaded_video'), gifOptions)
+                                .then(blob => {
+                                    video_recorder.poster = blob;
+                                    // Create a download link for the generated GIF
+                                    const url = URL.createObjectURL(blob);
+                                    const a = document.createElement('a');
+                                    a.href = url;
+                                    a.download =
+                                        'generated.gif'; // Set the filename for download
+                                    a.textContent = 'Download GIF';
+                                    document.body.appendChild(a);
+                                    a.click(); // Simulate click to trigger download
+                                    document.body.removeChild(a); // Cleanup
+                                })
+                                .catch(error => {
+                                    // Handle errors
+                                    console.error('Failed to create GIF:', error);
+                                });
                         }, 1000);
                     };
                 }
