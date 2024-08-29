@@ -187,7 +187,6 @@
 
     <canvas id="canvasgif" style="display: none;"></canvas>
 
-
     <script>
         var player = null;
         let player_face = null;
@@ -204,7 +203,7 @@
         let uploadBtn = $('.upload_btn');
         var durationMinutes = 0;
         var allowSaveBtn = false;
-        var limit = `{{ $limit }}`;
+        var limit = `{{ $limit }}`; 
         var recCount = `{{ $recCount }}`;
 
         let blobs = {

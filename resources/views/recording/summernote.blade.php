@@ -100,6 +100,7 @@
         ...hint
     });
 
+
     $('.sms-summernote').summernote({
         toolbar: [
             ['insert', ['Short']]

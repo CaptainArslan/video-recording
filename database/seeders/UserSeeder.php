@@ -22,11 +22,11 @@ class UserSeeder extends Seeder
             'email' => 'admin@gmail.com',
             'password' => Hash::make('12345678'),
             'role' => 0,
-            
+
             // 'location_id' => Str::random(15),
             // 'ghl_api_key' => Str::random(15),
         ]);
 
-        // User::factory(2)->create();
+        User::factory(2)->create();
     }
 }

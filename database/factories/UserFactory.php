@@ -21,7 +21,7 @@ class UserFactory extends Factory
             // 'user_name' => $this->faker->userName(),
             'email' => $this->faker->safeEmail(),
             // 'phone' => $this->faker->phoneNumber(),
-            'role' => $this->faker->numberBetween([0, 1, 2]),
+            'role' => rand(0, 2),
             'location_id' => Str::random(15),
             'ghl_api_key' => Str::random(15),
             'password' => Hash::make('12345678'),
